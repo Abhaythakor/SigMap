@@ -77,6 +77,22 @@ func (r *DomainRepository) CreateNote(ctx context.Context, domainID int, content
 	return err
 }
 
+func (r *DomainRepository) GetNoteByID(ctx context.Context, id int) (NoteListItem, error) {
+	var item NoteListItem
+	err := r.Pool.QueryRow(ctx, `
+		SELECT 
+			n.id, 
+			COALESCE(d.name, t.name) as target,
+			CASE WHEN n.domain_id IS NOT NULL THEN 'Domain' ELSE 'Technology' END as type,
+			n.content, n.author, n.updated_at
+		FROM notes n
+		LEFT JOIN domains d ON n.domain_id = d.id
+		LEFT JOIN technologies t ON n.technology_id = t.id
+		WHERE n.id = $1
+	`, id).Scan(&item.ID, &item.Target, &item.Type, &item.Content, &item.Author, &item.UpdatedAt)
+	return item, err
+}
+
 // UpdateNote updates an existing note.
 func (r *DomainRepository) UpdateNote(ctx context.Context, id int, content string) error {
 	_, err := r.Pool.Exec(ctx, `

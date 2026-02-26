@@ -86,9 +86,34 @@ func (h *NoteHandler) New(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		DomainID int
 		IsEdit   bool
+		Note     repositories.NoteListItem
 	}{
 		DomainID: domainID,
 		IsEdit:   false,
+	}
+
+	if err := h.templates["form"].ExecuteTemplate(w, "note_form", data); err != nil {
+		log.Printf("Error rendering note form: %v", err)
+	}
+}
+
+func (h *NoteHandler) Edit(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, _ := strconv.Atoi(idStr)
+
+	note, err := h.Repo.GetNoteByID(r.Context(), id)
+	if err != nil {
+		http.Error(w, "Note not found", http.StatusNotFound)
+		return
+	}
+
+	data := struct {
+		DomainID int
+		IsEdit   bool
+		Note     repositories.NoteListItem
+	}{
+		IsEdit: true,
+		Note:   note,
 	}
 
 	if err := h.templates["form"].ExecuteTemplate(w, "note_form", data); err != nil {
@@ -115,6 +140,26 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (h *NoteHandler) Update(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, _ := strconv.Atoi(idStr)
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	content := r.FormValue("content")
+
+	if err := h.Repo.UpdateNote(r.Context(), id, content); err != nil {
+		http.Error(w, "Failed to update note", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Redirect", "/notes")
+	w.WriteHeader(http.StatusOK)
+}
+
 func (h *NoteHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, _ := strconv.Atoi(idStr)
@@ -124,6 +169,5 @@ func (h *NoteHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Trigger removal from UI
 	w.WriteHeader(http.StatusOK)
 }

@@ -101,6 +101,8 @@ func main() {
 	r.Get("/notes", noteHandler.List)
 	r.Get("/notes/new", noteHandler.New)
 	r.Post("/notes", noteHandler.Create)
+	r.Get("/notes/{id}/edit", noteHandler.Edit)
+	r.Post("/notes/{id}", noteHandler.Update)
 	r.Delete("/notes/{id}", noteHandler.Delete)
 	r.Get("/trends", trendHandler.List)
 	r.Get("/delta", deltaHandler.List)
