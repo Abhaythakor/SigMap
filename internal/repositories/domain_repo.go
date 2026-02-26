@@ -76,3 +76,17 @@ func (r *DomainRepository) CreateNote(ctx context.Context, domainID int, content
 	`, domainID, content, author)
 	return err
 }
+
+// UpdateNote updates an existing note.
+func (r *DomainRepository) UpdateNote(ctx context.Context, id int, content string) error {
+	_, err := r.Pool.Exec(ctx, `
+		UPDATE notes SET content = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2
+	`, content, id)
+	return err
+}
+
+// DeleteNote removes a note.
+func (r *DomainRepository) DeleteNote(ctx context.Context, id int) error {
+	_, err := r.Pool.Exec(ctx, "DELETE FROM notes WHERE id = $1", id)
+	return err
+}

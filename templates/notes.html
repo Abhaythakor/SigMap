@@ -19,7 +19,7 @@
     <!-- Notes Grid -->
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {{range .Notes}}
-        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl flex flex-col group hover:border-primary/50 transition-all duration-300">
+        <div id="note-{{.ID}}" class="bg-slate-800/50 border border-slate-700/50 rounded-xl flex flex-col group hover:border-primary/50 transition-all duration-300">
             <div class="p-6 flex-1">
                 <div class="flex items-start justify-between mb-4">
                     <div class="flex items-center gap-3">
@@ -37,7 +37,12 @@
                         <button class="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors" title="Edit">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </button>
-                        <button class="p-1.5 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition-colors" title="Delete">
+                        <button 
+                            hx-delete="/notes/{{.ID}}" 
+                            hx-target="#note-{{.ID}}" 
+                            hx-swap="outerHTML"
+                            hx-confirm="Are you sure you want to delete this note?"
+                            class="p-1.5 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition-colors" title="Delete">
                             <span class="material-symbols-outlined text-[18px]">delete</span>
                         </button>
                     </div>

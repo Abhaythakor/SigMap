@@ -7,7 +7,8 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Abhaythakor/SigMap/internal/repositories"
+	"github.com/go-chi/chi/v5"
+	"github.com/user/webtechview/internal/repositories"
 )
 
 type NoteHandler struct {
@@ -21,7 +22,16 @@ func NewNoteHandler(repo *repositories.DomainRepository) *NoteHandler {
 	return h
 }
 
+func (h *NoteHandler) getFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
+	}
+}
+
 func (h *NoteHandler) parseTemplates() {
+	funcMap := h.getFuncMap()
+
 	files := []string{
 		filepath.Join("templates", "layouts", "base.html"),
 		filepath.Join("templates", "partials", "sidebar.html"),
@@ -29,7 +39,8 @@ func (h *NoteHandler) parseTemplates() {
 		filepath.Join("templates", "notes.html"),
 		filepath.Join("templates", "partials", "toast.html"),
 	}
-	tmpl, err := template.ParseFiles(files...)
+	tmpl := template.New("base").Funcs(funcMap)
+	tmpl, err := tmpl.ParseFiles(files...)
 	if err != nil {
 		log.Fatalf("Error parsing note templates: %v", err)
 	}
@@ -40,7 +51,8 @@ func (h *NoteHandler) parseTemplates() {
 		filepath.Join("templates", "partials", "note_form.html"),
 		filepath.Join("templates", "partials", "toast.html"),
 	}
-	tmplForm, err := template.ParseFiles(formFiles...)
+	tmplForm := template.New("form").Funcs(funcMap)
+	tmplForm, err = tmplForm.ParseFiles(formFiles...)
 	if err != nil {
 		log.Fatalf("Error parsing note form partial: %v", err)
 	}
@@ -73,8 +85,10 @@ func (h *NoteHandler) New(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		DomainID int
+		IsEdit   bool
 	}{
 		DomainID: domainID,
+		IsEdit:   false,
 	}
 
 	if err := h.templates["form"].ExecuteTemplate(w, "note_form", data); err != nil {
@@ -97,13 +111,19 @@ func (h *NoteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We can't use HX-Redirect if we want to show a toast on the next page easily without session flash.
-	// But since HTMX can swap the body, we can just return the new notes list + toast.
-	
-	// For simplicity, let's just use HX-Redirect for now. 
-	// To show toast after redirect, we'd need a flash message.
-	
-	// Alternative: return status 200 and hx-trigger a refresh or redirect.
 	w.Header().Set("HX-Redirect", "/notes")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *NoteHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, _ := strconv.Atoi(idStr)
+
+	if err := h.Repo.DeleteNote(r.Context(), id); err != nil {
+		http.Error(w, "Failed to delete note", http.StatusInternalServerError)
+		return
+	}
+
+	// Trigger removal from UI
 	w.WriteHeader(http.StatusOK)
 }
