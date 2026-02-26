@@ -1,0 +1,90 @@
+
+{{define "title"}}Domains - SigMap{{end}}
+
+{{define "header_title"}}Domains Analysis{{end}}
+
+{{define "content"}}
+<div class="space-y-8">
+    <div class="flex flex-col gap-1">
+        <div class="flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight text-white">Domains</h1>
+                <p class="text-slate-500 dark:text-slate-400">Analyze and manage detected technology stacks across your infrastructure.</p>
+            </div>
+            <a href="/export/domains" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
+                <span class="material-symbols-outlined text-sm">download</span>
+                Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="flex flex-wrap gap-3 bg-white dark:bg-slate-800/20 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm items-center">
+        <div class="flex-1 min-w-[240px] relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+            <input 
+                name="search" 
+                type="text"
+                placeholder="Search domains..."
+                class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary/50"
+                hx-get="/domains"
+                hx-trigger="keyup changed delay:500ms"
+                hx-target="#domain-table-body"
+                hx-include="[name='confidence'], [name='bookmarked']"
+                hx-push-url="true"
+            />
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="relative">
+                <select 
+                    name="confidence" 
+                    class="appearance-none bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-2 pl-3 pr-10 text-xs font-medium focus:ring-2 focus:ring-primary/50 text-slate-700 dark:text-slate-300"
+                    hx-get="/domains"
+                    hx-target="#domain-table-body"
+                    hx-include="[name='search'], [name='bookmarked']"
+                    hx-push-url="true"
+                >
+                    <option value="">Confidence: All</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                </select>
+                <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-sm">expand_more</span>
+            </div>
+            <label class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <input 
+                    name="bookmarked" 
+                    type="checkbox" 
+                    value="true"
+                    class="w-4 h-4 rounded text-primary bg-slate-200 dark:bg-slate-700 border-none focus:ring-0 focus:ring-offset-0"
+                    hx-get="/domains"
+                    hx-target="#domain-table-body"
+                    hx-include="[name='search'], [name='confidence']"
+                    hx-push-url="true"
+                />
+                <span class="text-xs font-medium text-slate-700 dark:text-slate-300">Bookmarked</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="bg-white dark:bg-slate-800/20 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
+                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Domain</th>
+                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Technologies</th>
+                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Categories</th>
+                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Confidence</th>
+                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Last Seen</th>
+                    <th class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="domain-table-body" class="divide-y divide-slate-200 dark:divide-slate-800">
+                {{template "domain_rows" .}}
+            </tbody>
+        </table>
+        {{template "pagination" .}}
+    </div>
+</div>
+{{end}}

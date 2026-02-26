@@ -1,0 +1,18 @@
+{{define "header"}}
+<header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-background-dark/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-10">
+    <h2 class="text-xl font-bold">{{block "header_title" .}}Overview{{end}}</h2>
+    <div class="flex items-center gap-4">
+        <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[18px]">search</span>
+            <input class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64" placeholder="Search technologies..." type="text"/>
+        </div>
+        <form class="flex items-center gap-2" hx-post="/scan" hx-target="body" hx-push-url="false" hx-indicator="#scan-loading">
+            <input name="domain" type="text" required placeholder="domain.com" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-40">
+            <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors">
+                <span id="scan-loading" class="htmx-indicator animate-spin material-symbols-outlined text-[18px] align-middle mr-1">sync</span>
+                Scan
+            </button>
+        </form>
+    </div>
+</header>
+{{end}}

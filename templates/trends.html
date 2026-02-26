@@ -1,0 +1,82 @@
+{{template "base" .}}
+
+{{define "title"}}Trends - SigMap{{end}}
+
+{{define "header_title"}}Trends Analysis{{end}}
+
+{{define "content"}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Summary Metrics -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {{range .Trends}}
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm">
+            <div class="flex justify-between items-start mb-4">
+                <span class="text-sm font-medium text-slate-500 dark:text-slate-400">{{.Label}}</span>
+                <div class="{{if ge .Trend 0.0}}bg-green-500/10 text-green-500{{else}}bg-red-500/10 text-red-500{{end}} px-2 py-0.5 rounded text-xs font-bold">
+                    {{if ge .Trend 0.0}}+{{end}}{{.Trend}}%
+                </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono">{{.Value}}</span>
+            </div>
+        </div>
+        {{end}}
+    </section>
+
+    <!-- Charts Section -->
+    <section class="grid grid-cols-1 gap-6">
+        <!-- Detection Velocity -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-xl shadow-sm flex flex-col min-h-[400px]">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900 dark:text-white">Detection Velocity (30 Days)</h3>
+                    <p class="text-xs text-slate-500">Scan throughput over time</p>
+                </div>
+            </div>
+            <div class="flex-1 relative">
+                <canvas id="velocityChart"></canvas>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    const ctx = document.getElementById('velocityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [{{range .Velocity}}"{{.Date}}",{{end}}],
+            datasets: [{
+                label: 'Detections',
+                data: [{{range .Velocity}}{{.Count}},{{end}}],
+                borderColor: '#197fe6',
+                backgroundColor: 'rgba(25, 127, 230, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#197fe6'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+</script>
+{{end}}

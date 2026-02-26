@@ -1,0 +1,18 @@
+{{define "toast"}}
+<div id="toast-{{.ID}}" 
+     {{if .OOB}}hx-swap-oob="beforeend:#toast-container"{{end}}
+     class="flex items-center w-full max-w-xs p-4 mb-4 text-slate-300 bg-slate-800 rounded-lg shadow-xl border border-slate-700 transition-opacity duration-300"
+     role="alert"
+     hx-on="load: setTimeout(() => { this.style.opacity = '0'; setTimeout(() => this.remove(), 300); }, 3000)">
+    <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 rounded-lg {{if eq .Type "success"}}bg-emerald-500/20 text-emerald-500{{else}}bg-rose-500/20 text-rose-500{{end}}">
+        <span class="material-symbols-outlined text-sm">
+            {{if eq .Type "success"}}check_circle{{else}}error{{end}}
+        </span>
+    </div>
+    <div class="ms-3 text-sm font-normal">{{.Message}}</div>
+    <button type="button" class="ms-auto -mx-1.5 -my-1.5 text-slate-500 hover:text-white rounded-lg p-1.5 inline-flex items-center justify-center h-8 w-8" 
+            onclick="this.parentElement.remove()">
+        <span class="material-symbols-outlined text-sm">close</span>
+    </button>
+</div>
+{{end}}

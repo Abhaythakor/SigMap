@@ -1,0 +1,60 @@
+
+{{define "title"}}Delta - SigMap{{end}}
+
+{{define "header_title"}}Technology Delta Tracking{{end}}
+
+{{define "content"}}
+<div class="space-y-8 max-w-7xl mx-auto">
+    <div class="flex flex-col gap-1">
+        <h1 class="text-3xl font-black tracking-tight text-white mb-2">Technology Delta</h1>
+        <p class="text-slate-400">Comparing stack changes for monitored domains in the last 24 hours.</p>
+    </div>
+
+    <!-- Main Table -->
+    <div class="bg-background-dark border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-900/50 text-[11px] uppercase tracking-widest text-slate-500 font-bold">
+                    <th class="px-6 py-4 border-b border-slate-800">Domain Asset</th>
+                    <th class="px-6 py-4 border-b border-slate-800">Technology Change</th>
+                    <th class="px-6 py-4 border-b border-slate-800">Change Type</th>
+                    <th class="px-6 py-4 border-b border-slate-800 text-center">Confidence</th>
+                    <th class="px-6 py-4 border-b border-slate-800">Detected At</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/50">
+                {{range .Deltas}}
+                <tr class="hover:bg-slate-800/20 transition-colors group">
+                    <td class="px-6 py-5 font-mono text-sm text-primary">{{.DomainName}}</td>
+                    <td class="px-6 py-5">
+                        <span class="tech-tag {{if eq .ChangeType "Added"}}tech-tag-added{{else}}tech-tag-removed{{end}}">
+                            {{.TechName}}
+                        </span>
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center gap-2">
+                            <span class="size-2 rounded-full {{if eq .ChangeType "Added"}}bg-emerald-500{{else}}bg-rose-500{{end}}"></span>
+                            <span class="text-xs font-semibold {{if eq .ChangeType "Added"}}text-emerald-400{{else}}text-rose-400{{end}}">
+                                {{.ChangeType}}
+                            </span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-5 text-center text-sm font-medium">{{.Confidence}}%</td>
+                    <td class="px-6 py-5 text-sm text-slate-500">{{.DetectedAt.Format "Jan 02, 15:04:05"}}</td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-slate-500 italic">No changes detected in the last 24 hours.</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    .tech-tag { @apply flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border border-slate-700/50 bg-slate-800/50; }
+    .tech-tag-added { border-color: rgba(16, 185, 129, 0.5); color: #34d399; background-color: rgba(16, 185, 129, 0.1); }
+    .tech-tag-removed { border-color: rgba(244, 63, 94, 0.5); color: #fb7185; background-color: rgba(244, 63, 94, 0.1); text-decoration: line-through; }
+</style>
+{{end}}

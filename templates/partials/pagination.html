@@ -1,0 +1,38 @@
+{{define "pagination"}}
+<div id="pagination-controls" hx-swap-oob="true" class="px-6 py-4 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800">
+    <p class="text-xs text-slate-500">
+        Showing {{if .Domains}}{{add (mul (sub .Page 1) .Limit) 1}} to {{min (mul .Page .Limit) .TotalItems}}{{else}}0{{end}} of {{.TotalItems}} domains
+    </p>
+    <div class="flex gap-1">
+        {{if gt .Page 1}}
+        <button 
+            hx-get="/domains?page={{sub .Page 1}}&search={{.Filters.Search}}&confidence={{.Filters.Confidence}}&bookmarked={{.Filters.IsBookmarked}}"
+            hx-target="#domain-table-body"
+            hx-push-url="true"
+            class="p-1 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            Previous
+        </button>
+        {{else}}
+        <button disabled class="p-1 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold opacity-50 cursor-not-allowed">
+            Previous
+        </button>
+        {{end}}
+
+        <span class="p-1 px-3 rounded-lg bg-primary text-white text-xs font-semibold">{{.Page}} of {{.TotalPages}}</span>
+
+        {{if lt .Page .TotalPages}}
+        <button 
+            hx-get="/domains?page={{add .Page 1}}&search={{.Filters.Search}}&confidence={{.Filters.Confidence}}&bookmarked={{.Filters.IsBookmarked}}"
+            hx-target="#domain-table-body"
+            hx-push-url="true"
+            class="p-1 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            Next
+        </button>
+        {{else}}
+        <button disabled class="p-1 px-3 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold opacity-50 cursor-not-allowed">
+            Next
+        </button>
+        {{end}}
+    </div>
+</div>
+{{end}}

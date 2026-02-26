@@ -1,0 +1,83 @@
+
+{{define "title"}}Technologies - SigMap{{end}}
+
+{{define "header_title"}}Technologies Breakdown{{end}}
+
+{{define "content"}}
+<div class="space-y-8 max-w-7xl mx-auto">
+    <div class="mb-8">
+        <h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Technologies</h2>
+        <p class="text-slate-500 dark:text-slate-400 mt-1">Comprehensive breakdown of detected software and infrastructure.</p>
+    </div>
+
+    <!-- Main Table Content -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-800">
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Technology</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Domains</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Confidence</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk Level</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                {{range .Technologies}}
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary overflow-hidden">
+                                {{if .Icon}}
+                                <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-5 h-5 object-contain">
+                                {{else}}
+                                <span class="material-symbols-outlined text-xl">code</span>
+                                {{end}}
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-slate-900 dark:text-white">{{.Name}}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-slate-600 dark:text-slate-400">{{.Category}}</span>
+                    </td>
+                    <td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{{.DomainCount}}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
+                            {{.Confidence}}%
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold 
+                            {{if eq .RiskLevel "Safe" "Low"}}bg-emerald-500/10 text-emerald-500
+                            {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
+                            {{else}}bg-rose-500/10 text-rose-500{{end}}">
+                            {{.RiskLevel}}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end gap-2">
+                            <button class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">open_in_new</span>
+                            </button>
+                            <button class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">sticky_note_2</span>
+                            </button>
+                            <button class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-xl">bookmark</span>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No technologies found.</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

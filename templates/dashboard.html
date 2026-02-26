@@ -1,0 +1,127 @@
+
+{{define "title"}}Dashboard - SigMap{{end}}
+
+{{define "header_title"}}Dashboard Overview{{end}}
+
+{{define "content"}}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div class="space-y-8 max-w-7xl mx-auto">
+    <!-- Key Metrics -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Detections</p>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-3xl font-bold">{{.Stats.TotalDetections}}</span>
+                <span class="text-xs font-medium text-emerald-500 flex items-center">+12.4%</span>
+            </div>
+        </div>
+        <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Avg Confidence</p>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-3xl font-bold text-emerald-500">{{printf "%.1f" .Stats.HighConfidence}}%</span>
+                <span class="text-xs font-medium text-emerald-500 flex items-center">+0.5%</span>
+            </div>
+        </div>
+        <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Risky Technologies</p>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-3xl font-bold text-rose-500">{{.Stats.RiskyTechnologies}}</span>
+                <span class="text-xs font-medium text-rose-500 flex items-center">Critical</span>
+            </div>
+        </div>
+        <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Bookmarked Domains</p>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-3xl font-bold">{{.Stats.BookmarkedDomains}}</span>
+                <span class="text-xs font-medium text-slate-400">Total</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Charts Section -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Detection Trends -->
+        <div class="lg:col-span-2 p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 flex flex-col min-h-[350px]">
+            <h3 class="font-bold text-lg mb-4">Detection Trends (7 Days)</h3>
+            <div class="flex-1 relative">
+                <canvas id="trendsChart"></canvas>
+            </div>
+        </div>
+        <!-- Technology Distribution -->
+        <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 flex flex-col min-h-[350px]">
+            <h3 class="font-bold text-lg mb-4">Top Technologies</h3>
+            <div class="flex-1 relative">
+                <canvas id="distChart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Activity -->
+    <section class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+        <h3 class="font-bold text-lg mb-6">Recent Activity</h3>
+        <div class="text-slate-500 italic text-center py-8">
+            Detailed activity feed integration coming in Phase 4.
+        </div>
+    </section>
+</div>
+
+<script>
+    // Initialize Trends Chart
+    const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+    new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: [{{range .Trends}}"{{.Date}}",{{end}}],
+            datasets: [{
+                label: 'Detections',
+                data: [{{range .Trends}}{{.Count}},{{end}}],
+                borderColor: '#197fe6',
+                backgroundColor: 'rgba(25, 127, 230, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Initialize Distribution Chart
+    const distCtx = document.getElementById('distChart').getContext('2d');
+    new Chart(distCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [{{range .Distribution}}"{{.Name}}",{{end}}],
+            datasets: [{
+                data: [{{range .Distribution}}{{.Percentage}},{{end}}],
+                backgroundColor: [
+                    '#197fe6',
+                    '#10b981',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#94a3b8', usePointStyle: true, padding: 20 }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+</script>
+{{end}}

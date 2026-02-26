@@ -1,0 +1,38 @@
+{{define "note_form"}}
+<div id="modal-backdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden" 
+         hx-on="click from:body: if (event.target == document.getElementById('modal-backdrop')) htmx.remove(document.getElementById('modal-backdrop'))">
+        <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+            <h3 class="text-lg font-bold text-white">Add Technical Note</h3>
+            <button type="button" onclick="htmx.remove(document.getElementById('modal-backdrop'))" class="text-slate-500 hover:text-white">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <form hx-post="/notes" hx-target="body" hx-push-url="false" class="p-6 space-y-4">
+            <input type="hidden" name="domain_id" value="{{.DomainID}}">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Content</label>
+                <textarea name="content" rows="4" required
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-sm text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    placeholder="Enter your observations..."></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Author (Optional)</label>
+                <input type="text" name="author" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    placeholder="Your name">
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="htmx.remove(document.getElementById('modal-backdrop'))"
+                    class="px-4 py-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                    class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors">
+                    Save Note
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

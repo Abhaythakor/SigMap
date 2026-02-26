@@ -1,0 +1,76 @@
+
+{{define "title"}}Bookmarks - SigMap{{end}}
+
+{{define "header_title"}}Manage Bookmarks{{end}}
+
+{{define "content"}}
+<div class="space-y-8 max-w-7xl mx-auto">
+    <div class="flex justify-between items-end mb-8">
+        <div>
+            <h2 class="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Bookmarks</h2>
+            <p class="text-slate-500 dark:text-slate-400 mt-1">Manage your saved domains, technologies, and categories.</p>
+        </div>
+        <a href="/export/domains?bookmarked=true" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors">
+            <span class="material-symbols-outlined text-sm">export_notes</span>
+            Export List
+        </a>
+    </div>
+
+    <!-- Table View -->
+    <div class="bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-800">
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name / Domain</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Confidence</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date Added</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                {{range .Bookmarks}}
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td class="px-6 py-4">
+                        <span class="material-symbols-outlined text-primary" title="{{.Type}}">
+                            {{if eq .Type "Domain"}}public{{else}}memory{{end}}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-mono text-sm text-primary font-medium">{{.Name}}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm">{{.Category}}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold 
+                            {{if ge .Confidence 90}}bg-emerald-500/10 text-emerald-500
+                            {{else if ge .Confidence 60}}bg-amber-500/10 text-amber-500
+                            {{else}}bg-rose-500/10 text-rose-500{{end}} uppercase tracking-tighter">
+                            {{if ge .Confidence 90}}High{{else if ge .Confidence 60}}Medium{{else}}Low{{end}}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">{{.DateAdded.Format "Jan 02, 2006"}}</td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex justify-end gap-2">
+                            <button class="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors" title="View Notes">
+                                <span class="material-symbols-outlined text-[20px]">sticky_note_2</span>
+                            </button>
+                            <button class="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors" title="External Link">
+                                <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+                            </button>
+                            {{template "bookmark_button" .}}
+                        </div>
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No bookmarks found.</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{end}}

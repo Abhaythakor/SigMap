@@ -1,0 +1,26 @@
+# Binaries
+server
+server.exe
+
+# Environment variables
+.env
+
+# Logs
+*.log
+/tmp/
+
+# Documentation and Planning (as requested)
+docs/
+TODO_LOGIC.md
+TODO_PERFORMANCE.md
+TODO_TESTING.md
+TODO_UI_UX.md
+
+# Test data
+testDir/
+
+# OS files
+.DS_Store
+
+# Go specific
+vendor/

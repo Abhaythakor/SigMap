@@ -1,0 +1,67 @@
+
+{{define "title"}}Notes - SigMap{{end}}
+
+{{define "header_title"}}Manage Notes{{end}}
+
+{{define "content"}}
+<div class="space-y-8 max-w-7xl mx-auto">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+            <h2 class="text-4xl font-black tracking-tight text-slate-100 mb-2 font-display">Notes</h2>
+            <p class="text-slate-400">Manage and organize technical observations across your infrastructure.</p>
+        </div>
+        <button class="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-6 rounded-lg transition-all shadow-lg shadow-primary/20">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+            <span>Add New Note</span>
+        </button>
+    </div>
+
+    <!-- Notes Grid -->
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {{range .Notes}}
+        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl flex flex-col group hover:border-primary/50 transition-all duration-300">
+            <div class="p-6 flex-1">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center w-8 h-8 rounded bg-primary/20 text-primary">
+                            <span class="material-symbols-outlined text-[18px]">
+                                {{if eq .Type "Domain"}}dns{{else}}terminal{{end}}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-black uppercase text-slate-500 leading-none mb-1">Attached to {{.Type}}</p>
+                            <code class="text-sm font-mono text-primary font-bold">{{.Target}}</code>
+                        </div>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button class="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white transition-colors" title="Edit">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        <button class="p-1.5 hover:bg-red-500/20 rounded text-slate-400 hover:text-red-400 transition-colors" title="Delete">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="text-slate-300 text-sm leading-relaxed space-y-2">
+                    <p>{{.Content}}</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-700/50 bg-background-dark/30 rounded-b-xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white">
+                        {{if .Author}}{{.Author}}{{else}}AC{{end}}
+                    </div>
+                    <span class="text-xs font-medium text-slate-400">{{if .Author}}{{.Author}}{{else}}Admin{{end}}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-slate-500">
+                    <span class="material-symbols-outlined text-[14px]">schedule</span>
+                    <span class="text-[11px] font-medium">Modified {{.UpdatedAt.Format "Jan 02, 15:04"}}</span>
+                </div>
+            </div>
+        </div>
+        {{else}}
+        <div class="col-span-full py-12 text-center text-slate-500 italic">No notes found.</div>
+        {{end}}
+    </div>
+</div>
+{{end}}

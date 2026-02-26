@@ -1,0 +1,78 @@
+package repositories
+
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type DomainRepository struct {
+	Pool *pgxpool.Pool
+}
+
+func NewDomainRepository(pool *pgxpool.Pool) *DomainRepository {
+	return &DomainRepository{Pool: pool}
+}
+
+// EnsureDomain checks if a domain exists, otherwise creates it.
+func (r *DomainRepository) EnsureDomain(ctx context.Context, name string) (int, error) {
+	var id int
+	err := r.Pool.QueryRow(ctx, `
+		INSERT INTO domains (name, updated_at)
+		VALUES ($1, CURRENT_TIMESTAMP)
+		ON CONFLICT (name) DO UPDATE SET updated_at = EXCLUDED.updated_at
+		RETURNING id
+	`, name).Scan(&id)
+	return id, err
+}
+
+// AddDetection adds a technology detection for a domain.
+func (r *DomainRepository) AddDetection(ctx context.Context, domainID int, techName string, url string, version string, confidence int, source string) error {
+	var techID int
+	err := r.Pool.QueryRow(ctx, "SELECT id FROM technologies WHERE name = $1", techName).Scan(&techID)
+	if err == pgx.ErrNoRows {
+		err = r.Pool.QueryRow(ctx, `
+			INSERT INTO technologies (name, description, risk_level)
+			VALUES ($1, 'Automatically detected technology', 'Low')
+			RETURNING id
+		`, techName).Scan(&techID)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+
+	_, err = r.Pool.Exec(ctx, `
+		INSERT INTO detections (domain_id, technology_id, url, version, confidence, source, last_seen)
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+		ON CONFLICT ON CONSTRAINT unique_detection DO UPDATE SET 
+			last_seen = EXCLUDED.last_seen,
+			confidence = EXCLUDED.confidence,
+			url = EXCLUDED.url
+	`, domainID, techID, url, version, confidence, source)
+	
+	return err
+}
+
+// ToggleBookmark toggles the is_bookmarked status of a domain.
+func (r *DomainRepository) ToggleBookmark(ctx context.Context, id int) (bool, error) {
+	var isBookmarked bool
+	err := r.Pool.QueryRow(ctx, `
+		UPDATE domains 
+		SET is_bookmarked = NOT is_bookmarked, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+		RETURNING is_bookmarked
+	`, id).Scan(&isBookmarked)
+	return isBookmarked, err
+}
+
+// CreateNote adds a note to a domain.
+func (r *DomainRepository) CreateNote(ctx context.Context, domainID int, content string, author string) error {
+	_, err := r.Pool.Exec(ctx, `
+		INSERT INTO notes (domain_id, content, author, updated_at)
+		VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+	`, domainID, content, author)
+	return err
+}
