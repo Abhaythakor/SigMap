@@ -46,25 +46,24 @@ func main() {
 	}
 	defer db.Close()
 
-	// Infrastructure & Services
-	domainRepo := repositories.NewDomainRepository(db.Pool)
-	cliRunner := runner.NewRunner()
-
+	// Services Initialization
 	vulnConnectors := []vulnintel.SourceConnector{
 		sources.NewNVDConnector(),
 		sources.NewVulnersConnector(),
+		sources.NewGithubConnector(),
 	}
 	vulnService := vulnintel.NewService(db.Pool, vulnConnectors)
 	alertService := services.NewAlertService(db.Pool)
 	
 	chaosClient := chaos.NewClient(os.Getenv("CHAOS_API_KEY"))
-	chaosService := services.NewChaosService(domainRepo, chaosClient)
+	chaosService := services.NewChaosService(repositories.NewDomainRepository(db.Pool), chaosClient)
 	
 	ipInfoClient := ipinfo.NewClient(os.Getenv("IPINFO_TOKEN"))
-	ingestionService := services.NewIngestionService(domainRepo, ipInfoClient)
+	ingestionService := services.NewIngestionService(repositories.NewDomainRepository(db.Pool), ipInfoClient)
 
-	httpxService := services.NewHTTPXService(domainRepo, cliRunner)
-	nucleiService := services.NewNucleiService(domainRepo, cliRunner)
+	cliRunner := runner.NewRunner()
+	httpxService := services.NewHTTPXService(repositories.NewDomainRepository(db.Pool), cliRunner)
+	nucleiService := services.NewNucleiService(repositories.NewDomainRepository(db.Pool), cliRunner)
 
 	// Handle Flags
 	if *syncFlag {
@@ -98,12 +97,14 @@ func main() {
 	// Background Workers
 	go startBackgroundJobs(db.Pool, vulnService, alertService)
 
-	// Repositories & Handlers
+	// Repositories
 	dashboardRepo := repositories.NewDashboardRepository(db.Pool)
+	domainRepo := repositories.NewDomainRepository(db.Pool)
 	techRepo := repositories.NewTechRepository(db.Pool)
 	categoryRepo := repositories.NewCategoryRepository(db.Pool)
 	trendRepo := repositories.NewTrendRepo(db.Pool)
 
+	// Handlers
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	domainHandler := handlers.NewDomainHandler(domainRepo)
 	techHandler := handlers.NewTechHandler(techRepo)
@@ -121,6 +122,10 @@ func main() {
 	// Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger, customMiddleware.Recovery, middleware.Recoverer, middleware.Compress(5), middleware.RealIP, middleware.CleanPath, customMiddleware.SanitizeInput)
+
+	// Rate Limiting
+	r.Use(middleware.Throttle(100))
+	r.Use(middleware.Timeout(60 * time.Second))
 
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
