@@ -38,7 +38,10 @@ func (h *ScanHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simulate detection results (integration point for real scanner)
+	// 1. Infrastructure Enrichment
+	h.IngestSvc.LookupInfrastructure(ctx, domainID, domainName)
+
+	// 2. Simulate detection results
 	techs := []string{"React", "Nginx", "Cloudflare", "Google Analytics"}
 	for _, t := range techs {
 		err = h.DomainRepo.AddDetection(ctx, domainID, t, "https://"+domainName, "v1.0.0", 95, "Live Scanner")

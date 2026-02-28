@@ -1,0 +1,81 @@
+{{template "base" .}}
+
+{{define "title"}}Settings - Alerts - SigMap{{end}}
+
+{{define "header_title"}}Notification Settings{{end}}
+
+{{define "content"}}
+<div class="max-w-4xl mx-auto space-y-8">
+    <div class="flex flex-col gap-1">
+        <h1 class="text-3xl font-black tracking-tight text-white">Alert Channels</h1>
+        <p class="text-slate-400">Configure where SigMap sends real-time security alerts for new critical risks.</p>
+    </div>
+
+    <!-- Add New Channel Form -->
+    <div class="bg-slate-900/50 border border-slate-800 rounded-xl p-6 shadow-sm">
+        <h3 class="text-sm font-bold uppercase text-slate-500 mb-4">Add New Channel</h3>
+        <form hx-post="/settings/alerts" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Friendly Name</label>
+                <input name="name" type="text" required placeholder="Slack Security Team" 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary outline-none">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Channel Type</label>
+                <select name="type" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary outline-none">
+                    <option value="webhook">Generic Webhook</option>
+                    <option value="slack">Slack Webhook</option>
+                    <option value="discord">Discord Webhook</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2 px-4 rounded-lg transition-all text-sm">
+                    Add Channel
+                </button>
+            </div>
+            <div class="md:col-span-3">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Webhook URL</label>
+                <input name="url" type="url" required placeholder="https://hooks.slack.com/services/..." 
+                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary outline-none">
+            </div>
+        </form>
+    </div>
+
+    <!-- Active Channels List -->
+    <div class="space-y-4">
+        <h3 class="text-sm font-bold uppercase text-slate-500">Active Integrations</h3>
+        <div class="grid grid-cols-1 gap-4">
+            {{range .Channels}}
+            <div id="channel-{{.ID}}" class="flex items-center justify-between p-4 bg-slate-900/30 border border-slate-800 rounded-xl group">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined">
+                            {{if eq .Type "webhook"}}webhook{{else if eq .Type "slack"}}chat{{else}}hub{{end}}
+                        </span>
+                    </div>
+                    <div>
+                        <p class="font-bold text-white">{{.Name}}</p>
+                        <p class="text-xs text-slate-500 font-mono truncate max-w-xs">{{.URL}}</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">Active</span>
+                    <button 
+                        hx-delete="/settings/alerts/{{.ID}}" 
+                        hx-target="#channel-{{.ID}}" 
+                        hx-swap="outerHTML"
+                        hx-confirm="Remove this alert channel?"
+                        class="p-2 text-slate-500 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                        <span class="material-symbols-outlined text-lg">delete</span>
+                    </button>
+                </div>
+            </div>
+            {{else}}
+            <div class="py-12 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-600 italic">
+                No notification channels configured yet.
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}

@@ -9,24 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Abhaythakor/SigMap/internal/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type AlertChannel struct {
-	ID       int
-	Name     string
-	Type     string
-	URL      string
-	IsActive bool
-}
-
-type AlertPayload struct {
-	Domain    string `json:"domain"`
-	Tech      string `json:"technology"`
-	Risk      string `json:"risk_level"`
-	Message   string `json:"message"`
-	Timestamp string `json:"timestamp"`
-}
 
 type AlertService struct {
 	Pool *pgxpool.Pool
@@ -43,7 +28,7 @@ func (s *AlertService) DispatchAlert(ctx context.Context, domainName, techName, 
 		return err
 	}
 
-	payload := AlertPayload{
+	payload := models.AlertPayload{
 		Domain:    domainName,
 		Tech:      techName,
 		Risk:      riskLevel,
@@ -54,7 +39,7 @@ func (s *AlertService) DispatchAlert(ctx context.Context, domainName, techName, 
 	jsonPayload, _ := json.Marshal(payload)
 
 	for _, ch := range channels {
-		go func(c AlertChannel) {
+		go func(c models.AlertChannel) {
 			err := s.sendToChannel(c, jsonPayload)
 			if err != nil {
 				log.Printf("Failed to send alert to %s: %v", c.Name, err)
@@ -67,16 +52,16 @@ func (s *AlertService) DispatchAlert(ctx context.Context, domainName, techName, 
 	return nil
 }
 
-func (s *AlertService) getActiveChannels(ctx context.Context) ([]AlertChannel, error) {
+func (s *AlertService) getActiveChannels(ctx context.Context) ([]models.AlertChannel, error) {
 	rows, err := s.Pool.Query(ctx, "SELECT id, name, type, url FROM alert_channels WHERE is_active = TRUE")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var channels []AlertChannel
+	var channels []models.AlertChannel
 	for rows.Next() {
-		var c AlertChannel
+		var c models.AlertChannel
 		if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.URL); err == nil {
 			channels = append(channels, c)
 		}
@@ -84,7 +69,7 @@ func (s *AlertService) getActiveChannels(ctx context.Context) ([]AlertChannel, e
 	return channels, nil
 }
 
-func (s *AlertService) sendToChannel(ch AlertChannel, payload []byte) error {
+func (s *AlertService) sendToChannel(ch models.AlertChannel, payload []byte) error {
 	resp, err := http.Post(ch.URL, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
 		return err

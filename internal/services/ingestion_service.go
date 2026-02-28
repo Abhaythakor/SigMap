@@ -38,7 +38,9 @@ func (s *IngestionService) IngestSampleData(ctx context.Context) error {
 			return err
 		}
 
-		// Assign 3-6 random technologies to each domain
+		// Enrich with mock infrastructure
+		s.LookupInfrastructure(ctx, domainID, domainName)
+
 		numTechs := r.Intn(4) + 3
 		shuffledTechs := make([]string, len(techs))
 		copy(shuffledTechs, techs)
@@ -55,4 +57,26 @@ func (s *IngestionService) IngestSampleData(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// LookupInfrastructure simulates discovery of IP, ASN, and Cloud Provider.
+func (s *IngestionService) LookupInfrastructure(ctx context.Context, domainID int, domainName string) {
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	
+	ips := []string{"34.212.12.1", "52.4.15.22", "104.16.24.5", "13.248.155.12"}
+	clouds := []string{"AWS", "Google Cloud", "Cloudflare", "Azure"}
+	asns := []int{16509, 15169, 13335, 8075}
+	orgs := []string{"Amazon.com", "Google LLC", "Cloudflare, Inc.", "Microsoft Corp"}
+
+	idx := rng.Intn(len(ips))
+	
+	// Update domain with infra info
+	s.Repo.Pool.Exec(ctx, `
+		UPDATE domains SET 
+			ip_address = $1, 
+			cloud_provider = $2, 
+			asn = $3, 
+			asn_org = $4 
+		WHERE id = $5
+	`, ips[idx], clouds[idx], asns[idx], orgs[idx], domainID)
 }

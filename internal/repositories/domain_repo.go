@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 
+	"github.com/Abhaythakor/SigMap/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -66,6 +67,36 @@ func (r *DomainRepository) ToggleBookmark(ctx context.Context, id int) (bool, er
 		RETURNING is_bookmarked
 	`, id).Scan(&isBookmarked)
 	return isBookmarked, err
+}
+
+// ListAlertChannels returns all configured notification channels.
+func (r *DomainRepository) ListAlertChannels(ctx context.Context) ([]models.AlertChannel, error) {
+	rows, err := r.Pool.Query(ctx, "SELECT id, name, type, url, is_active, created_at FROM alert_channels ORDER BY created_at DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channels []models.AlertChannel
+	for rows.Next() {
+		var c models.AlertChannel
+		if err := rows.Scan(&c.ID, &c.Name, &c.Type, &c.URL, &c.IsActive, &c.CreatedAt); err == nil {
+			channels = append(channels, c)
+		}
+	}
+	return channels, nil
+}
+
+// AddAlertChannel adds a new notification channel.
+func (r *DomainRepository) AddAlertChannel(ctx context.Context, name, cType, url string) error {
+	_, err := r.Pool.Exec(ctx, "INSERT INTO alert_channels (name, type, url) VALUES ($1, $2, $3)", name, cType, url)
+	return err
+}
+
+// DeleteAlertChannel removes a notification channel.
+func (r *DomainRepository) DeleteAlertChannel(ctx context.Context, id int) error {
+	_, err := r.Pool.Exec(ctx, "DELETE FROM alert_channels WHERE id = $1", id)
+	return err
 }
 
 // CreateNote adds a note to a domain.

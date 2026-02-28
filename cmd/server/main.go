@@ -97,9 +97,11 @@ func main() {
 	trendHandler := handlers.NewTrendHandler(trendRepo)
 	deltaHandler := handlers.NewDeltaHandler(domainRepo)
 	exportHandler := handlers.NewExportHandler(domainRepo)
-	scanHandler := handlers.NewScanHandler(domainRepo, nil)
+	ingestionService := services.NewIngestionService(domainRepo)
+	scanHandler := handlers.NewScanHandler(domainRepo, ingestionService)
+	settingsHandler := handlers.NewSettingsHandler(domainRepo)
 
-	// Router
+	// Initialize Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger, customMiddleware.Recovery, middleware.Recoverer, middleware.Compress(5), middleware.RealIP, middleware.CleanPath, customMiddleware.SanitizeInput)
 
@@ -126,6 +128,10 @@ func main() {
 	r.Get("/delta", deltaHandler.List)
 	r.Get("/export/domains", exportHandler.Domains)
 	r.Post("/scan", scanHandler.Trigger)
+	r.Get("/settings/alerts", settingsHandler.AlertsView)
+	r.Post("/settings/alerts", settingsHandler.AddChannel)
+	r.Delete("/settings/alerts/{id}", settingsHandler.DeleteChannel)
+
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK); w.Write([]byte("OK")) })
 
 	port := os.Getenv("PORT")
