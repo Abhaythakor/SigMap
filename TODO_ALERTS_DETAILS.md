@@ -15,8 +15,8 @@
 - [x] Create `internal/jobs/alert_worker.go`:
     - [x] Scan for new Critical/High risks in the last hour
     - [x] Dispatch to active channels
-- [ ] UI: Basic Alert Configuration page (`/settings/alerts`)
+- [x] UI: Basic Alert Configuration page (`/settings/alerts`)
 
 ## Phase 3: Infrastructure Enrichment
-- [ ] Integration: ASN & Cloud Provider lookup (via IP)
+- [~] Integration: ASN & Cloud Provider lookup (Real API implementation pending)
 - [x] UI: Show Cloud Provider icons (AWS, GCP, Azure) next to domains (Infrastructure Grid implemented)

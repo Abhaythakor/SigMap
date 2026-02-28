@@ -14,6 +14,9 @@ import (
 
 	"github.com/Abhaythakor/SigMap/internal/database"
 	"github.com/Abhaythakor/SigMap/internal/handlers"
+	"github.com/Abhaythakor/SigMap/internal/integrations/chaos"
+	"github.com/Abhaythakor/SigMap/internal/integrations/ipinfo"
+	"github.com/Abhaythakor/SigMap/internal/integrations/runner"
 	"github.com/Abhaythakor/SigMap/internal/jobs"
 	customMiddleware "github.com/Abhaythakor/SigMap/internal/middleware"
 	"github.com/Abhaythakor/SigMap/internal/repositories"
@@ -43,10 +46,22 @@ func main() {
 	}
 	defer db.Close()
 
-	// Services
+	// Repositories
+	domainRepo := repositories.NewDomainRepository(db.Pool)
+
+	// Services Initialization
 	vulnConnectors := []vulnintel.SourceConnector{sources.NewNVDConnector()}
 	vulnService := vulnintel.NewService(db.Pool, vulnConnectors)
 	alertService := services.NewAlertService(db.Pool)
+	
+	chaosClient := chaos.NewClient(os.Getenv("CHAOS_API_KEY"))
+	chaosService := services.NewChaosService(domainRepo, chaosClient)
+	
+	ipInfoClient := ipinfo.NewClient(os.Getenv("IPINFO_TOKEN"))
+	ingestionService := services.NewIngestionService(domainRepo, ipInfoClient)
+
+	cliRunner := runner.NewRunner()
+	httpxService := services.NewHTTPXService(domainRepo, cliRunner)
 
 	// Handle Flags
 	if *syncFlag {
@@ -57,8 +72,7 @@ func main() {
 	}
 
 	if *ingestFlag {
-		repo := repositories.NewDomainRepository(db.Pool)
-		if err := services.NewIngestionService(repo).IngestFromDirectory(context.Background(), "testDir"); err != nil {
+		if err := ingestionService.IngestFromDirectory(context.Background(), "testDir"); err != nil {
 			log.Fatalf("Ingestion failed: %v", err)
 		}
 		return
@@ -81,13 +95,13 @@ func main() {
 	// Background Workers
 	go startBackgroundJobs(db.Pool, vulnService, alertService)
 
-	// Repositories & Handlers
+	// Repositories
 	dashboardRepo := repositories.NewDashboardRepository(db.Pool)
-	domainRepo := repositories.NewDomainRepository(db.Pool)
 	techRepo := repositories.NewTechRepository(db.Pool)
 	categoryRepo := repositories.NewCategoryRepository(db.Pool)
 	trendRepo := repositories.NewTrendRepo(db.Pool)
 
+	// Handlers
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	domainHandler := handlers.NewDomainHandler(domainRepo)
 	techHandler := handlers.NewTechHandler(techRepo)
@@ -97,11 +111,12 @@ func main() {
 	trendHandler := handlers.NewTrendHandler(trendRepo)
 	deltaHandler := handlers.NewDeltaHandler(domainRepo)
 	exportHandler := handlers.NewExportHandler(domainRepo)
-	ingestionService := services.NewIngestionService(domainRepo)
-	scanHandler := handlers.NewScanHandler(domainRepo, ingestionService)
+	
+	scanHandler := handlers.NewScanHandler(domainRepo, ingestionService, vulnService, chaosService, httpxService)
 	settingsHandler := handlers.NewSettingsHandler(domainRepo)
+	vulnHandler := handlers.NewVulnHandler(vulnService)
 
-	// Initialize Router
+	// Router
 	r := chi.NewRouter()
 	r.Use(middleware.Logger, customMiddleware.Recovery, middleware.Recoverer, middleware.Compress(5), middleware.RealIP, middleware.CleanPath, customMiddleware.SanitizeInput)
 
@@ -110,6 +125,8 @@ func main() {
 
 	// Routes
 	r.Get("/", dashboardHandler.ServeHTTP)
+	r.Get("/internal/vuln/{technology}", vulnHandler.GetProfile)
+	
 	r.Get("/domains", domainHandler.List)
 	r.Get("/domains/{id}", domainHandler.Detail)
 	r.Get("/technologies", techHandler.List)

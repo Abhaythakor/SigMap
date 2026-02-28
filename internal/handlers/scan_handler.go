@@ -1,20 +1,31 @@
 package handlers
 
 import (
+	"context"
 	"log"
 	"net/http"
 
 	"github.com/Abhaythakor/SigMap/internal/repositories"
 	"github.com/Abhaythakor/SigMap/internal/services"
+	"github.com/Abhaythakor/SigMap/internal/vulnintel"
 )
 
 type ScanHandler struct {
 	DomainRepo *repositories.DomainRepository
 	IngestSvc  *services.IngestionService
+	VulnSvc    *vulnintel.Service
+	ChaosSvc   *services.ChaosService
+	HTTPXSvc   *services.HTTPXService
 }
 
-func NewScanHandler(repo *repositories.DomainRepository, ingestSvc *services.IngestionService) *ScanHandler {
-	return &ScanHandler{DomainRepo: repo, IngestSvc: ingestSvc}
+func NewScanHandler(repo *repositories.DomainRepository, ingestSvc *services.IngestionService, vulnSvc *vulnintel.Service, chaosSvc *services.ChaosService, httpxSvc *services.HTTPXService) *ScanHandler {
+	return &ScanHandler{
+		DomainRepo: repo,
+		IngestSvc:  ingestSvc,
+		VulnSvc:    vulnSvc,
+		ChaosSvc:   chaosSvc,
+		HTTPXSvc:   httpxSvc,
+	}
 }
 
 func (h *ScanHandler) Trigger(w http.ResponseWriter, r *http.Request) {
@@ -41,14 +52,15 @@ func (h *ScanHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 	// 1. Infrastructure Enrichment
 	h.IngestSvc.LookupInfrastructure(ctx, domainID, domainName)
 
-	// 2. Simulate detection results
-	techs := []string{"React", "Nginx", "Cloudflare", "Google Analytics"}
-	for _, t := range techs {
-		err = h.DomainRepo.AddDetection(ctx, domainID, t, "https://"+domainName, "v1.0.0", 95, "Live Scanner")
-		if err != nil {
-			log.Printf("Error adding detection for %s: %v", t, err)
+	// 2. Subdomain Discovery (Background)
+	go h.ChaosSvc.DiscoverSubdomains(ctx, domainName)
+
+	// 3. Live Tech Detection (via HTTPX)
+	go func() {
+		if err := h.HTTPXSvc.ScanDomain(context.Background(), domainName); err != nil {
+			log.Printf("Scan error for %s: %v", domainName, err)
 		}
-	}
+	}()
 
 	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
