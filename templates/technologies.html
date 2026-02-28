@@ -1,3 +1,4 @@
+{{template "base" .}}
 
 {{define "title"}}Technologies - SigMap{{end}}
 
@@ -18,7 +19,8 @@
                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Technology</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Category</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Domains</th>
-                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Confidence</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">CVEs</th>
+                    <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">Exploit</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Risk Level</th>
                     <th class="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
                 </tr>
@@ -44,16 +46,26 @@
                         <span class="text-sm text-slate-600 dark:text-slate-400">{{.Category}}</span>
                     </td>
                     <td class="px-6 py-4 text-sm font-medium text-slate-900 dark:text-white">{{.DomainCount}}</td>
-                    <td class="px-6 py-4">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary">
-                            {{.Confidence}}%
-                        </span>
+                    <td class="px-6 py-4 text-center">
+                        {{if gt .CVECount 0}}
+                        <span class="text-sm font-bold text-rose-500">{{.CVECount}}</span>
+                        {{else}}
+                        <span class="text-xs text-slate-500">0</span>
+                        {{end}}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {{if .ExploitAvailable}}
+                        <span class="material-symbols-outlined text-rose-500 text-lg" title="Public Exploit Available">bug_report</span>
+                        {{else}}
+                        <span class="material-symbols-outlined text-slate-700 text-lg">horizontal_rule</span>
+                        {{end}}
                     </td>
                     <td class="px-6 py-4">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold 
                             {{if eq .RiskLevel "Safe" "Low"}}bg-emerald-500/10 text-emerald-500
                             {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
-                            {{else}}bg-rose-500/10 text-rose-500{{end}}">
+                            {{else if eq .RiskLevel "High"}}bg-rose-500/10 text-rose-500
+                            {{else}}bg-rose-600 text-white animate-pulse{{end}}">
                             {{.RiskLevel}}
                         </span>
                     </td>
@@ -73,7 +85,7 @@
                 </tr>
                 {{else}}
                 <tr>
-                    <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No technologies found.</td>
+                    <td colspan="7" class="px-6 py-8 text-center text-slate-500 italic">No technologies found.</td>
                 </tr>
                 {{end}}
             </tbody>

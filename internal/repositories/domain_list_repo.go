@@ -15,6 +15,8 @@ type DomainListItem struct {
 	Categories   []string
 	Confidence   int
 	LastSeen     string
+	HighRisk     int
+	MediumRisk   int
 }
 
 type TechTag struct {
@@ -89,12 +91,15 @@ func (r *DomainRepository) List(ctx context.Context, limit, offset int, filters 
 			COALESCE(ARRAY_AGG(DISTINCT t.name || ':' || COALESCE(t.icon, '')) FILTER (WHERE t.name IS NOT NULL), '{}') as techs,
 			COALESCE(ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.name IS NOT NULL), '{}') as cats,
 			COALESCE(AVG(det.confidence), 0)::INT as avg_conf,
-			MAX(det.last_seen) as last_seen
+			MAX(det.last_seen) as last_seen,
+			COUNT(DISTINCT CASE WHEN vp.risk_level IN ('High', 'Critical') THEN t.id END) as high_risk,
+			COUNT(DISTINCT CASE WHEN vp.risk_level = 'Medium' THEN t.id END) as med_risk
 		FROM domains d
 		LEFT JOIN detections det ON d.id = det.domain_id
 		LEFT JOIN technologies t ON det.technology_id = t.id
 		LEFT JOIN technology_categories tc ON t.id = tc.technology_id
 		LEFT JOIN categories c ON tc.category_id = c.id
+		LEFT JOIN technology_vuln_profile vp ON t.name = vp.technology
 		WHERE %s
 		GROUP BY d.id
 		ORDER BY d.updated_at DESC
@@ -112,7 +117,7 @@ func (r *DomainRepository) List(ctx context.Context, limit, offset int, filters 
 		var item DomainListItem
 		var rawTechs []string
 		var lastSeen *time.Time
-		err := rows.Scan(&item.ID, &item.Name, &item.IsBookmarked, &rawTechs, &item.Categories, &item.Confidence, &lastSeen)
+		err := rows.Scan(&item.ID, &item.Name, &item.IsBookmarked, &rawTechs, &item.Categories, &item.Confidence, &lastSeen, &item.HighRisk, &item.MediumRisk)
 		if err != nil {
 			return nil, err
 		}

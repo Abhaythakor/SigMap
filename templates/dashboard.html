@@ -1,3 +1,4 @@
+{{template "base" .}}
 
 {{define "title"}}Dashboard - SigMap{{end}}
 
@@ -8,33 +9,35 @@
 
 <div class="space-y-8 max-w-7xl mx-auto">
     <!-- Key Metrics -->
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
             <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Total Detections</p>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-3xl font-bold">{{.Stats.TotalDetections}}</span>
-                <span class="text-xs font-medium text-emerald-500 flex items-center">+12.4%</span>
             </div>
         </div>
         <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
             <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Avg Confidence</p>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-3xl font-bold text-emerald-500">{{printf "%.1f" .Stats.HighConfidence}}%</span>
-                <span class="text-xs font-medium text-emerald-500 flex items-center">+0.5%</span>
             </div>
         </div>
         <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
-            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Risky Technologies</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Risky Tech</p>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-3xl font-bold text-rose-500">{{.Stats.RiskyTechnologies}}</span>
-                <span class="text-xs font-medium text-rose-500 flex items-center">Critical</span>
+            </div>
+        </div>
+        <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 border-l-4 border-l-rose-600">
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium text-rose-500">Critical Threats</p>
+            <div class="mt-2 flex items-baseline gap-2">
+                <span class="text-3xl font-bold text-rose-600">{{.Stats.CriticalTechs}}</span>
             </div>
         </div>
         <div class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
-            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Bookmarked Domains</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Bookmarks</p>
             <div class="mt-2 flex items-baseline gap-2">
                 <span class="text-3xl font-bold">{{.Stats.BookmarkedDomains}}</span>
-                <span class="text-xs font-medium text-slate-400">Total</span>
             </div>
         </div>
     </section>
@@ -59,9 +62,20 @@
 
     <!-- Recent Activity -->
     <section class="p-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
-        <h3 class="font-bold text-lg mb-6">Recent Activity</h3>
-        <div class="text-slate-500 italic text-center py-8">
-            Detailed activity feed integration coming in Phase 4.
+        <h3 class="font-bold text-lg mb-6">Security Posture Summary</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold uppercase text-slate-500">Highest Risk Categories</h4>
+                <div class="space-y-2">
+                    <p class="text-sm text-slate-400">Analysis coming soon...</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <h4 class="text-xs font-bold uppercase text-slate-500">Recent Vulnerability Alerts</h4>
+                <div class="space-y-2">
+                    <p class="text-sm text-slate-400">Feed integration in Phase 4.</p>
+                </div>
+            </div>
         </div>
     </section>
 </div>
@@ -87,8 +101,8 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
-                x: { grid: { display: false } }
+                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
             }
         }
     });

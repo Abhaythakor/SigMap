@@ -109,3 +109,14 @@ func (r *TrendRepo) calculateCategoryTrend(ctx context.Context) (int, float64, e
 
 	return current, calculatePercentageChange(current, previous), nil
 }
+
+func calculatePercentageChange(current, previous int) float64 {
+	if previous == 0 {
+		if current > 0 {
+			return 100.0
+		}
+		return 0.0
+	}
+	change := float64(current-previous) / float64(previous) * 100.0
+	return math.Round(change*10) / 10
+}

@@ -1,7 +1,21 @@
 {{define "domain_rows"}}
 {{range .Domains}}
 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-    <td class="px-6 py-4 font-mono text-sm text-primary font-medium">{{.Name}}</td>
+    <td class="px-6 py-4">
+        <div class="flex flex-col">
+            <span class="font-mono text-sm text-primary font-medium">{{.Name}}</span>
+            {{if or (gt .HighRisk 0) (gt .MediumRisk 0)}}
+            <div class="flex gap-2 mt-1">
+                {{if gt .HighRisk 0}}
+                <span class="text-[9px] font-bold uppercase text-rose-500 bg-rose-500/10 px-1 rounded">High Risk: {{.HighRisk}}</span>
+                {{end}}
+                {{if gt .MediumRisk 0}}
+                <span class="text-[9px] font-bold uppercase text-amber-500 bg-amber-500/10 px-1 rounded">Med Risk: {{.MediumRisk}}</span>
+                {{end}}
+            </div>
+            {{end}}
+        </div>
+    </td>
     <td class="px-6 py-4">
         <div class="flex flex-wrap gap-1">
             {{range .Technologies}}
@@ -25,21 +39,23 @@
             {{if ge .Confidence 90}}High{{else if ge .Confidence 60}}Medium{{else}}Low{{end}}
         </span>
     </td>
-                        <td class="px-6 py-4 text-sm text-slate-500">{{.LastSeen}}</td>
-                        <td class="px-6 py-4 text-right">
-                            <div class="flex justify-end gap-2">
-                                                            {{template "bookmark_button" .}}
-                                                            <button 
-                                                                hx-get="/notes/new?domain_id={{.ID}}" 
-                                                                hx-target="body" 
-                                                                hx-swap="beforeend"
-                                                                class="text-slate-400 hover:text-primary transition-colors">
-                                                                <span class="material-symbols-outlined text-lg">description</span>
-                                                            </button>                                <button class="text-slate-400 hover:text-slate-100">
-                                    <span class="material-symbols-outlined text-lg">open_in_new</span>
-                                </button>
-                            </div>
-                        </td></tr>
+    <td class="px-6 py-4 text-sm text-slate-500">{{.LastSeen}}</td>
+    <td class="px-6 py-4 text-right">
+        <div class="flex justify-end gap-2">
+            {{template "bookmark_button" .}}
+            <button 
+                hx-get="/notes/new?domain_id={{.ID}}" 
+                hx-target="body" 
+                hx-swap="beforeend"
+                class="text-slate-400 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined text-lg">description</span>
+            </button>
+            <button class="text-slate-400 hover:text-slate-100">
+                <span class="material-symbols-outlined text-lg">open_in_new</span>
+            </button>
+        </div>
+    </td>
+</tr>
 {{else}}
 <tr>
     <td colspan="6" class="px-6 py-8 text-center text-slate-500 italic">No domains match your filters.</td>

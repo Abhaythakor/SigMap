@@ -13,15 +13,19 @@ import (
 
 	"github.com/Abhaythakor/SigMap/internal/database"
 	"github.com/Abhaythakor/SigMap/internal/handlers"
+	"github.com/Abhaythakor/SigMap/internal/jobs"
 	customMiddleware "github.com/Abhaythakor/SigMap/internal/middleware"
 	"github.com/Abhaythakor/SigMap/internal/repositories"
 	"github.com/Abhaythakor/SigMap/internal/services"
+	"github.com/Abhaythakor/SigMap/internal/vulnintel"
+	"github.com/Abhaythakor/SigMap/internal/vulnintel/sources"
 )
 
 func main() {
 	// Flags
 	syncFlag := flag.Bool("sync", false, "Sync technology metadata from Wappalyzer")
 	ingestFlag := flag.Bool("ingest", false, "Ingest mock sample data for domains")
+	vulnFlag := flag.Bool("vuln", false, "Refresh vulnerability profiles for detected technologies")
 	flag.Parse()
 
 	// Load environment variables
@@ -35,6 +39,12 @@ func main() {
 		log.Fatalf("Could not connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// Vulnerability Service Initialization
+	vulnConnectors := []vulnintel.SourceConnector{
+		sources.NewNVDConnector(),
+	}
+	vulnService := vulnintel.NewService(db.Pool, vulnConnectors)
 
 	// Handle Sync
 	if *syncFlag {
@@ -54,6 +64,16 @@ func main() {
 			log.Fatalf("Ingestion failed: %v", err)
 		}
 		log.Println("Mock ingestion completed. Exiting.")
+		return
+	}
+
+	// Handle Vuln Refresh
+	if *vulnFlag {
+		vulnJob := jobs.NewVulnRefreshJob(db.Pool, vulnService)
+		if err := vulnJob.Run(context.Background()); err != nil {
+			log.Fatalf("Vulnerability refresh failed: %v", err)
+		}
+		log.Println("Vulnerability refresh completed. Exiting.")
 		return
 	}
 
@@ -81,6 +101,7 @@ func main() {
 
 	// Global Middleware
 	r.Use(middleware.Logger)
+	r.Use(customMiddleware.Recovery)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 	r.Use(middleware.RealIP)

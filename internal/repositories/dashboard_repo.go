@@ -11,6 +11,7 @@ type DashboardStats struct {
 	HighConfidence    float64
 	RiskyTechnologies int
 	BookmarkedDomains int
+	CriticalTechs     int
 }
 
 type TrendPoint struct {
@@ -39,10 +40,13 @@ func (r *DashboardRepository) GetStats(ctx context.Context) (DashboardStats, err
 		FROM view_dashboard_stats
 	`).Scan(&stats.TotalDetections, &stats.HighConfidence, &stats.RiskyTechnologies, &stats.BookmarkedDomains)
 	
-	// Fallback to real-time if view is empty (though unlikely after migration)
+	// Fallback or additional metrics not yet in materialized view
 	if err != nil {
 		return r.GetStatsRealtime(ctx)
 	}
+
+	// Fetch CriticalTechs realtime for now
+	err = r.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM technology_vuln_profile WHERE risk_level = 'Critical'").Scan(&stats.CriticalTechs)
 
 	return stats, nil
 }
@@ -60,7 +64,7 @@ func (r *DashboardRepository) GetStatsRealtime(ctx context.Context) (DashboardSt
 		return stats, err
 	}
 
-	err = r.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM technologies WHERE risk_level IN ('High', 'Critical')").Scan(&stats.RiskyTechnologies)
+	err = r.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM technology_vuln_profile WHERE risk_level IN ('High', 'Critical')").Scan(&stats.RiskyTechnologies)
 	if err != nil {
 		return stats, err
 	}
@@ -69,6 +73,8 @@ func (r *DashboardRepository) GetStatsRealtime(ctx context.Context) (DashboardSt
 	if err != nil {
 		return stats, err
 	}
+
+	err = r.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM technology_vuln_profile WHERE risk_level = 'Critical'").Scan(&stats.CriticalTechs)
 
 	return stats, nil
 }
