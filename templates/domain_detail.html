@@ -1,0 +1,153 @@
+{{template "base" .}}
+
+{{define "title"}}{{.Domain.Name}} - Deep Dive{{end}}
+
+{{define "header_title"}}{{.Domain.Name}}{{end}}
+
+{{define "content"}}
+<div class="max-w-7xl mx-auto space-y-8">
+    <!-- Breadcrumbs & Quick Actions -->
+    <div class="flex justify-between items-center">
+        <nav class="flex items-center gap-2 text-sm text-slate-500">
+            <a href="/domains" class="hover:text-primary transition-colors">Domains</a>
+            <span class="material-symbols-outlined text-xs">chevron_right</span>
+            <span class="text-slate-100 font-medium">{{.Domain.Name}}</span>
+        </nav>
+        <div class="flex gap-3">
+            {{template "bookmark_button" .Domain}}
+            <button hx-get="/notes/new?domain_id={{.Domain.ID}}" hx-target="body" hx-swap="beforeend"
+                class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold border border-slate-700 transition-all">
+                <span class="material-symbols-outlined text-sm">add_comment</span>
+                Add Note
+            </button>
+        </div>
+    </div>
+
+    <!-- Infrastructure Metadata Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-5 rounded-xl bg-slate-900/50 border border-slate-800">
+            <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">IP Address</p>
+            <p class="text-lg font-mono font-bold text-primary">{{if .Domain.IPAddress}}{{.Domain.IPAddress}}{{else}}N/A{{end}}</p>
+        </div>
+        <div class="p-5 rounded-xl bg-slate-900/50 border border-slate-800">
+            <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">Cloud Provider</p>
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm text-slate-400">cloud</span>
+                <p class="text-lg font-bold">{{if .Domain.CloudProvider}}{{.Domain.CloudProvider}}{{else}}Undetected{{end}}</p>
+            </div>
+        </div>
+        <div class="p-5 rounded-xl bg-slate-900/50 border border-slate-800">
+            <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">ASN / Network</p>
+            <p class="text-sm font-semibold truncate">{{if .Domain.ASNOrg}}AS{{.Domain.ASN}} - {{.Domain.ASNOrg}}{{else}}N/A{{end}}</p>
+        </div>
+        <div class="p-5 rounded-xl bg-slate-900/50 border border-slate-800">
+            <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">First Scanned</p>
+            <p class="text-sm font-semibold">{{.Domain.CreatedAt.Format "Jan 02, 2006"}}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Current Tech Stack (Enriched) -->
+        <div class="lg:col-span-2 space-y-6">
+            <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">analytics</span>
+                Current Technology Stack
+            </h3>
+            <div class="bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800/50 border-b border-slate-800">
+                        <tr>
+                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Technology</th>
+                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Version</th>
+                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500 text-center">CVEs</th>
+                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        {{range .Domain.CurrentStack}}
+                        <tr class="hover:bg-slate-800/30 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center overflow-hidden">
+                                        {{if .Icon}}
+                                        <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-5 h-5 object-contain">
+                                        {{else}}
+                                        <span class="material-symbols-outlined text-lg text-primary">code</span>
+                                        {{end}}
+                                    </div>
+                                    <span class="font-bold text-sm">{{.Name}}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 font-mono text-xs text-slate-400">{{if .Version}}{{.Version}}{{else}}---{{end}}</td>
+                            <td class="px-6 py-4 text-center">
+                                {{if gt .CVECount 0}}
+                                <span class="text-sm font-bold text-rose-500">{{.CVECount}}</span>
+                                {{else}}
+                                <span class="text-xs text-slate-600">0</span>
+                                {{end}}
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase 
+                                    {{if eq .RiskLevel "Critical"}}bg-rose-600 text-white animate-pulse
+                                    {{else if eq .RiskLevel "High"}}bg-rose-500/10 text-rose-500
+                                    {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
+                                    {{else}}bg-emerald-500/10 text-emerald-500{{end}}">
+                                    {{.RiskLevel}}
+                                </span>
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Detailed Notes Feed -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">notes</span>
+                    Internal Notes
+                </h3>
+                <div class="grid grid-cols-1 gap-4">
+                    {{range .Domain.Notes}}
+                    <div class="p-6 bg-slate-800/30 border border-slate-700/50 rounded-xl relative group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">{{.Author}} • {{.UpdatedAt.Format "Jan 02, 15:04"}}</span>
+                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button hx-get="/notes/{{.ID}}/edit" hx-target="body" hx-swap="beforeend" class="text-slate-500 hover:text-white transition-colors">
+                                    <span class="material-symbols-outlined text-sm">edit</span>
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-slate-300 leading-relaxed">{{.Content}}</p>
+                    </div>
+                    {{else}}
+                    <div class="py-12 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-600 italic">
+                        No technical notes added for this domain yet.
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Scan History Timeline -->
+        <div class="space-y-6">
+            <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">history</span>
+                Scan History
+            </h3>
+            <div class="relative border-l-2 border-slate-800 ml-4 space-y-8 pb-4">
+                {{range .Domain.History}}
+                <div class="relative pl-8">
+                    <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-primary"></div>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">{{.DetectedAt.Format "Jan 02, 2006"}}</p>
+                    <p class="text-sm font-bold text-slate-200">{{.TechName}} <span class="text-xs font-mono text-slate-500">{{.Version}}</span></p>
+                    <p class="text-[10px] text-slate-600">Successfully detected via Source Header Analysis</p>
+                </div>
+                {{else}}
+                <div class="pl-8 text-slate-600 italic text-sm">No historical data available.</div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

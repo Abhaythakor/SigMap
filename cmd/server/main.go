@@ -115,6 +115,7 @@ func main() {
 	// Routes
 	r.Get("/", dashboardHandler.ServeHTTP)
 	r.Get("/domains", domainHandler.List)
+	r.Get("/domains/{id}", domainHandler.Detail)
 	r.Get("/technologies", techHandler.List)
 	r.Get("/categories", categoryHandler.List)
 	r.Get("/bookmarks", bookmarkHandler.List)

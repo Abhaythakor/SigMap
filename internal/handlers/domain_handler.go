@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/Abhaythakor/SigMap/internal/repositories"
 )
 
@@ -41,7 +42,7 @@ func (h *DomainHandler) getFuncMap() template.FuncMap {
 func (h *DomainHandler) parseTemplates() {
 	funcMap := h.getFuncMap()
 
-	// Pre-parse the main view
+	// List View
 	baseFiles := []string{
 		filepath.Join("templates", "layouts", "base.html"),
 		filepath.Join("templates", "partials", "sidebar.html"),
@@ -51,29 +52,28 @@ func (h *DomainHandler) parseTemplates() {
 		filepath.Join("templates", "partials", "bookmark_button.html"),
 		filepath.Join("templates", "partials", "pagination.html"),
 	}
-	tmpl := template.New("base").Funcs(funcMap)
-	tmpl, err := tmpl.ParseFiles(baseFiles...)
-	if err != nil {
-		log.Fatalf("Error parsing domain templates: %v", err)
-	}
-	h.templates["index"] = tmpl
+	h.templates["index"] = template.Must(template.New("base").Funcs(funcMap).ParseFiles(baseFiles...))
 
-	// Pre-parse the partial view
-	partialFiles := []string{
+	// Detail View
+	detailFiles := []string{
+		filepath.Join("templates", "layouts", "base.html"),
+		filepath.Join("templates", "partials", "sidebar.html"),
+		filepath.Join("templates", "partials", "header.html"),
+		filepath.Join("templates", "domain_detail.html"),
+		filepath.Join("templates", "partials", "bookmark_button.html"),
+	}
+	h.templates["detail"] = template.Must(template.New("base").Funcs(funcMap).ParseFiles(detailFiles...))
+
+	// Partial rows
+	rowFiles := []string{
 		filepath.Join("templates", "partials", "domain_rows.html"),
 		filepath.Join("templates", "partials", "bookmark_button.html"),
 		filepath.Join("templates", "partials", "pagination.html"),
 	}
-	tmplPartial := template.New("rows").Funcs(funcMap)
-	tmplPartial, err = tmplPartial.ParseFiles(partialFiles...)
-	if err != nil {
-		log.Fatalf("Error parsing domain partial templates: %v", err)
-	}
-	h.templates["rows"] = tmplPartial
+	h.templates["rows"] = template.Must(template.New("rows").Funcs(funcMap).ParseFiles(rowFiles...))
 }
 
 func (h *DomainHandler) List(w http.ResponseWriter, r *http.Request) {
-	// Parse Filters
 	filters := repositories.DomainFilters{
 		Search:       r.URL.Query().Get("search"),
 		Category:     r.URL.Query().Get("category"),
@@ -81,11 +81,8 @@ func (h *DomainHandler) List(w http.ResponseWriter, r *http.Request) {
 		IsBookmarked: r.URL.Query().Get("bookmarked") == "true",
 	}
 
-	// Pagination
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
+	if page < 1 { page = 1 }
 	limit := 20
 	offset := (page - 1) * limit
 
@@ -97,8 +94,6 @@ func (h *DomainHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	total, _ := h.Repo.Count(r.Context(), filters)
-	totalPages := (total + limit - 1) / limit
-
 	data := struct {
 		CurrentPage string
 		Domains     []repositories.DomainListItem
@@ -112,24 +107,39 @@ func (h *DomainHandler) List(w http.ResponseWriter, r *http.Request) {
 		Domains:     items,
 		Filters:     filters,
 		Page:        page,
-		TotalPages:  totalPages,
+		TotalPages:  (total + limit - 1) / limit,
 		TotalItems:  total,
 		Limit:       limit,
 	}
 
-	isHX := r.Header.Get("HX-Request") == "true"
-
-	if isHX {
-		err = h.templates["rows"].ExecuteTemplate(w, "domain_rows", data)
-		if err == nil {
-			err = h.templates["rows"].ExecuteTemplate(w, "pagination", data)
-		}
+	if r.Header.Get("HX-Request") == "true" {
+		h.templates["rows"].ExecuteTemplate(w, "domain_rows", data)
+		h.templates["rows"].ExecuteTemplate(w, "pagination", data)
 	} else {
-		err = h.templates["index"].ExecuteTemplate(w, "base", data)
+		h.templates["index"].ExecuteTemplate(w, "base", data)
+	}
+}
+
+func (h *DomainHandler) Detail(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, _ := strconv.Atoi(idStr)
+
+	detail, err := h.Repo.GetDomainDetails(r.Context(), id)
+	if err != nil {
+		log.Printf("Error fetching domain details: %v", err)
+		http.Error(w, "Domain not found", http.StatusNotFound)
+		return
 	}
 
-	if err != nil {
-		log.Printf("Error executing template: %v", err)
-		return
+	data := struct {
+		CurrentPage string
+		Domain      repositories.DomainDetail
+	}{
+		CurrentPage: "domains",
+		Domain:      detail,
+	}
+
+	if err := h.templates["detail"].ExecuteTemplate(w, "base", data); err != nil {
+		log.Printf("Error rendering detail: %v", err)
 	}
 }

@@ -3,7 +3,7 @@
 <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
     <td class="px-6 py-4">
         <div class="flex flex-col">
-            <span class="font-mono text-sm text-primary font-medium">{{.Name}}</span>
+            <a href="/domains/{{.ID}}" class="font-mono text-sm text-primary font-medium hover:underline">{{.Name}}</a>
             {{if or (gt .HighRisk 0) (gt .MediumRisk 0)}}
             <div class="flex gap-2 mt-1">
                 {{if gt .HighRisk 0}}
