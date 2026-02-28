@@ -90,7 +90,7 @@
             <section aria-labelledby="stack-title">
                 <h3 id="stack-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">analytics</span>
-                    Technology Stack & CVE Metadata
+                    Technology Stack & CVE Intelligence
                 </h3>
                 <div class="space-y-4">
                     {{range .Domain.CurrentStack}}
@@ -117,13 +117,35 @@
                                 {{.RiskLevel}}
                             </span>
                         </div>
-                        {{if gt .CVECount 0}}
-                        <div class="p-4 bg-rose-500/5">
-                            <p class="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1 mb-2">
+                        
+                        <!-- Real CVE List from Intelligence Engine -->
+                        {{if .Vulnerabilities}}
+                        <div class="p-4 space-y-3">
+                            <p class="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
                                 <span class="material-symbols-outlined text-xs">gpp_maybe</span>
-                                Intelligence Findings ({{.CVECount}})
+                                Known Version Vulnerabilities ({{.CVECount}})
                             </p>
-                            <p class="text-xs text-slate-400">Version-based correlation identified {{.CVECount}} known vulnerabilities. Run active scan for validation.</p>
+                            <div class="grid grid-cols-1 gap-2">
+                                {{range .Vulnerabilities}}
+                                <div class="p-3 bg-slate-800/40 border border-slate-700/50 rounded-lg">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <span class="text-xs font-bold text-rose-400">{{.CVEID}}</span>
+                                        <span class="text-[9px] font-black uppercase px-1 rounded
+                                            {{if eq .SeverityLabel "Critical"}}bg-rose-600 text-white
+                                            {{else if eq .SeverityLabel "High"}}bg-rose-500/20 text-rose-500
+                                            {{else}}bg-amber-500/20 text-amber-500{{end}}">
+                                            {{.SeverityLabel}} {{.SeverityScore}}
+                                        </span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400 leading-relaxed">{{.Description}}</p>
+                                    <p class="text-[9px] text-slate-600 mt-1 uppercase font-bold">Class: {{.BugType}}</p>
+                                </div>
+                                {{end}}
+                            </div>
+                        </div>
+                        {{else if gt .CVECount 0}}
+                        <div class="p-4 bg-rose-500/5">
+                            <p class="text-xs text-slate-400 italic">Identified {{.CVECount}} potential vulnerabilities via version mapping. Run a deep refresh for full records.</p>
                         </div>
                         {{end}}
                     </div>
@@ -131,6 +153,7 @@
                 </div>
             </section>
 
+            <!-- Discovered Subdomains -->
             <section aria-labelledby="discovery-title">
                 <h3 id="discovery-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">hub</span>
@@ -153,6 +176,7 @@
                 </div>
             </section>
 
+            <!-- Detailed Notes Feed -->
             <section aria-labelledby="notes-title">
                 <h3 id="notes-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">notes</span>

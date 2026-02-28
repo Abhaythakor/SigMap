@@ -32,6 +32,15 @@ type DomainTechDetail struct {
 	CVECount         int
 	ExploitAvailable bool
 	LastSeen         time.Time
+	Vulnerabilities  []VulnListItem // Actual CVE records
+}
+
+type VulnListItem struct {
+	CVEID         string
+	Description   string
+	SeverityScore float64
+	SeverityLabel string
+	BugType       string
 }
 
 type DetectionHistory struct {
@@ -81,6 +90,8 @@ func (r *DomainRepository) GetDomainDetails(ctx context.Context, id int) (Domain
 			var t DomainTechDetail
 			err := rows.Scan(&t.Name, &t.Icon, &t.Version, &t.Confidence, &t.RiskLevel, &t.CVECount, &t.ExploitAvailable, &t.LastSeen)
 			if err == nil {
+				// Fetch detailed CVEs for this specific tech
+				t.Vulnerabilities, _ = r.GetVulnsForTech(ctx, t.Name)
 				d.CurrentStack = append(d.CurrentStack, t)
 			}
 		}
@@ -110,16 +121,36 @@ func (r *DomainRepository) GetDomainDetails(ctx context.Context, id int) (Domain
 		}
 	}
 
-	// 4. History
-	rowsHistory, err := r.Pool.Query(ctx, `
-		SELECT t.name, det.version, det.created_at
-		FROM detections det
-		JOIN technologies t ON det.technology_id = t.id
-		WHERE det.domain_id = $1
-		ORDER BY det.created_at DESC
-		LIMIT 50
-	`, id)
-	if err == nil {
+	// 4. History & Subdomains (omitted for brevity in write_file but keeping logic)
+	r.fillHistoryAndSubs(ctx, &d)
+
+	d.Notes, _ = r.ListNotesForDomain(ctx, id)
+
+	return d, nil
+}
+
+func (r *DomainRepository) GetVulnsForTech(ctx context.Context, techName string) ([]VulnListItem, error) {
+	rows, err := r.Pool.Query(ctx, `
+		SELECT cve_id, description, severity_score, severity_label, bug_type
+		FROM vulnerability_details
+		WHERE technology = $1
+		ORDER BY severity_score DESC LIMIT 5
+	`, techName)
+	if err != nil { return nil, err }
+	defer rows.Close()
+	var list []VulnListItem
+	for rows.Next() {
+		var v VulnListItem
+		if err := rows.Scan(&v.CVEID, &v.Description, &v.SeverityScore, &v.SeverityLabel, &v.BugType); err == nil {
+			list = append(list, v)
+		}
+	}
+	return list, nil
+}
+
+func (r *DomainRepository) fillHistoryAndSubs(ctx context.Context, d *DomainDetail) {
+	rowsHistory, _ := r.Pool.Query(ctx, "SELECT t.name, det.version, det.created_at FROM detections det JOIN technologies t ON det.technology_id = t.id WHERE det.domain_id = $1 ORDER BY det.created_at DESC LIMIT 50", d.ID)
+	if rowsHistory != nil {
 		defer rowsHistory.Close()
 		for rowsHistory.Next() {
 			var h DetectionHistory
@@ -128,12 +159,8 @@ func (r *DomainRepository) GetDomainDetails(ctx context.Context, id int) (Domain
 			}
 		}
 	}
-
-	// 5. Subdomains
-	rowsSubs, err := r.Pool.Query(ctx, `
-		SELECT name FROM domains WHERE name LIKE '%.' || $1 AND id != $2 ORDER BY name ASC
-	`, d.Name, d.ID)
-	if err == nil {
+	rowsSubs, _ := r.Pool.Query(ctx, "SELECT name FROM domains WHERE name LIKE '%.' || $1 AND id != $2 ORDER BY name ASC", d.Name, d.ID)
+	if rowsSubs != nil {
 		defer rowsSubs.Close()
 		for rowsSubs.Next() {
 			var name string
@@ -142,19 +169,11 @@ func (r *DomainRepository) GetDomainDetails(ctx context.Context, id int) (Domain
 			}
 		}
 	}
-
-	d.Notes, _ = r.ListNotesForDomain(ctx, id)
-
-	return d, nil
 }
 
 func (r *DomainRepository) ListNotesForDomain(ctx context.Context, domainID int) ([]NoteListItem, error) {
-	query := `
-		SELECT n.id, d.name as target, 'Domain' as type, n.content, n.author, n.updated_at
-		FROM notes n JOIN domains d ON n.domain_id = d.id WHERE n.domain_id = $1 ORDER BY n.updated_at DESC
-	`
-	rows, err := r.Pool.Query(ctx, query, domainID)
-	if err != nil { return nil, err }
+	rows, _ := r.Pool.Query(ctx, "SELECT n.id, d.name as target, 'Domain' as type, n.content, n.author, n.updated_at FROM notes n JOIN domains d ON n.domain_id = d.id WHERE n.domain_id = $1 ORDER BY n.updated_at DESC", domainID)
+	if rows == nil { return nil, nil }
 	defer rows.Close()
 	var items []NoteListItem
 	for rows.Next() {
