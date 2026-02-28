@@ -9,6 +9,9 @@ server.exe
 *.log
 /tmp/
 
+# Scripts
+run.sh
+
 # Documentation and Planning
 docs/
 TODO*.md
