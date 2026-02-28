@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Abhaythakor/SigMap/internal/models"
 	"github.com/jackc/pgx/v5"
@@ -30,6 +31,13 @@ func (r *DomainRepository) EnsureDomain(ctx context.Context, name string) (int, 
 
 // AddDetection adds a technology detection for a domain.
 func (r *DomainRepository) AddDetection(ctx context.Context, domainID int, techName string, url string, version string, confidence int, source string) error {
+	// If version is empty, check if techName has it (e.g. "Sentry:6.13.2")
+	if version == "" && strings.Contains(techName, ":") {
+		parts := strings.SplitN(techName, ":", 2)
+		techName = parts[0]
+		version = parts[1]
+	}
+
 	var techID int
 	err := r.Pool.QueryRow(ctx, "SELECT id FROM technologies WHERE name = $1", techName).Scan(&techID)
 	if err == pgx.ErrNoRows {

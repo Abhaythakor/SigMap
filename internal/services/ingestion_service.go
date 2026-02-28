@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -38,7 +39,6 @@ func (s *IngestionService) IngestSampleData(ctx context.Context) error {
 			return err
 		}
 
-		// Enrich with mock infrastructure
 		s.LookupInfrastructure(ctx, domainID, domainName)
 
 		numTechs := r.Intn(4) + 3
@@ -49,7 +49,23 @@ func (s *IngestionService) IngestSampleData(ctx context.Context) error {
 		})
 
 		for i := 0; i < numTechs; i++ {
-			err = s.Repo.AddDetection(ctx, domainID, shuffledTechs[i], "https://"+domainName, "v1.0.0", r.Intn(40)+60, "Mock Scanner")
+			version := ""
+			// HIGHER PROBABILITY OF EMPTY VERSION FOR TESTING (80% empty)
+			if r.Float32() > 0.8 {
+				major := r.Intn(10) + 1
+				minor := r.Intn(20)
+				patch := r.Intn(10)
+				version = fmt.Sprintf("v%d.%d.%d", major, minor, patch)
+			}
+
+			techName := shuffledTechs[i]
+			// 10% chance of using "Tech:Version" format
+			if version != "" && r.Float32() > 0.9 {
+				techName = fmt.Sprintf("%s:%s", techName, version)
+				version = ""
+			}
+
+			err = s.Repo.AddDetection(ctx, domainID, techName, "https://"+domainName, version, r.Intn(40)+60, "Mock Scanner")
 			if err != nil {
 				return err
 			}
@@ -70,7 +86,6 @@ func (s *IngestionService) LookupInfrastructure(ctx context.Context, domainID in
 
 	idx := rng.Intn(len(ips))
 	
-	// Update domain with infra info
 	s.Repo.Pool.Exec(ctx, `
 		UPDATE domains SET 
 			ip_address = $1, 
