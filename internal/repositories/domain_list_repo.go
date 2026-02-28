@@ -20,8 +20,9 @@ type DomainListItem struct {
 }
 
 type TechTag struct {
-	Name string
-	Icon string
+	Name    string
+	Icon    string
+	Version string
 }
 
 type DomainFilters struct {
@@ -85,10 +86,11 @@ func (r *DomainRepository) List(ctx context.Context, limit, offset int, filters 
 	
 	fullArgs := append([]interface{}{limit, offset}, whereArgs...)
 	
+	// Aggregating Tech:Icon:Version
 	query := fmt.Sprintf(`
 		SELECT 
 			d.id, d.name, d.is_bookmarked,
-			COALESCE(ARRAY_AGG(DISTINCT t.name || ':' || COALESCE(t.icon, '')) FILTER (WHERE t.name IS NOT NULL), '{}') as techs,
+			COALESCE(ARRAY_AGG(DISTINCT t.name || ':' || COALESCE(t.icon, '') || ':' || COALESCE(det.version, '')) FILTER (WHERE t.name IS NOT NULL), '{}') as techs,
 			COALESCE(ARRAY_AGG(DISTINCT c.name) FILTER (WHERE c.name IS NOT NULL), '{}') as cats,
 			COALESCE(AVG(det.confidence), 0)::INT as avg_conf,
 			MAX(det.last_seen) as last_seen,
@@ -123,10 +125,13 @@ func (r *DomainRepository) List(ctx context.Context, limit, offset int, filters 
 		}
 
 		for _, rt := range rawTechs {
-			parts := strings.SplitN(rt, ":", 2)
+			parts := strings.SplitN(rt, ":", 3)
 			tag := TechTag{Name: parts[0]}
 			if len(parts) > 1 {
 				tag.Icon = parts[1]
+			}
+			if len(parts) > 2 {
+				tag.Version = parts[2]
 			}
 			item.Technologies = append(item.Technologies, tag)
 		}

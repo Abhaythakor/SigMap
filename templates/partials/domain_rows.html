@@ -24,6 +24,9 @@
                 <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-3 h-3 object-contain">
                 {{end}}
                 {{.Name}}
+                {{if .Version}}
+                <span class="text-slate-500 font-mono ml-0.5">{{.Version}}</span>
+                {{end}}
             </span>
             {{end}}
         </div>
