@@ -8,7 +8,7 @@
 <div class="max-w-7xl mx-auto space-y-8">
     <!-- Breadcrumbs & Quick Actions -->
     <div class="flex justify-between items-center">
-        <nav class="flex items-center gap-2 text-sm text-slate-500">
+        <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-sm text-slate-500">
             <a href="/domains" class="hover:text-primary transition-colors">Domains</a>
             <span class="material-symbols-outlined text-xs">chevron_right</span>
             <span class="text-slate-100 font-medium">{{.Domain.Name}}</span>
@@ -24,6 +24,7 @@
         <div class="flex gap-3">
             {{template "bookmark_button" .Domain}}
             <button hx-get="/notes/new?domain_id={{.Domain.ID}}" hx-target="body" hx-swap="beforeend"
+                aria-label="Add a technical note"
                 class="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-semibold border border-slate-700 transition-all">
                 <span class="material-symbols-outlined text-sm">add_comment</span>
                 Add Note
@@ -32,7 +33,7 @@
     </div>
 
     <!-- Infrastructure Metadata Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <section aria-label="Infrastructure Metadata" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="p-5 rounded-xl bg-slate-900/50 border border-slate-800">
             <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">IP Address</p>
             <p class="text-lg font-mono font-bold text-primary">{{if .Domain.IPAddress}}{{.Domain.IPAddress}}{{else}}N/A{{end}}</p>
@@ -52,13 +53,13 @@
             <p class="text-[10px] font-bold uppercase text-slate-500 mb-1">First Scanned</p>
             <p class="text-sm font-semibold">{{.Domain.CreatedAt.Format "Jan 02, 2006"}}</p>
         </div>
-    </div>
+    </section>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Current Tech Stack -->
-        <div class="lg:col-span-2 space-y-8">
-            <div class="space-y-4">
-                <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+        <div class="lg:col-span-2 space-y-12">
+            <section aria-labelledby="stack-title">
+                <h3 id="stack-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">analytics</span>
                     Current Technology Stack
                 </h3>
@@ -66,10 +67,10 @@
                     <table class="w-full text-left">
                         <thead class="bg-slate-800/50 border-b border-slate-800">
                             <tr>
-                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Technology</th>
-                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Version</th>
-                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500 text-center">CVEs</th>
-                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Risk</th>
+                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Technology</th>
+                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Version</th>
+                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500 text-center">CVEs</th>
+                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Risk</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800">
@@ -79,7 +80,7 @@
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center overflow-hidden">
                                             {{if .Icon}}
-                                            <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-5 h-5 object-contain">
+                                            <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}} icon" class="w-5 h-5 object-contain">
                                             {{else}}
                                             <span class="material-symbols-outlined text-lg text-primary">code</span>
                                             {{end}}
@@ -109,58 +110,65 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
 
             <!-- Discovered Subdomains -->
-            <div class="space-y-4">
-                <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+            <section aria-labelledby="discovery-title">
+                <h3 id="discovery-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">hub</span>
-                    Discovered Subdomains
+                    Subdomain Discovery
                 </h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {{range .Domain.Subdomains}}
-                    <a href="/domains/redirect?name={{.}}" class="p-3 bg-slate-900/30 border border-slate-800 rounded-lg text-sm font-mono text-primary hover:bg-primary/5 hover:border-primary/50 transition-all truncate">
-                        {{.}}
-                    </a>
-                    {{else}}
-                    <div class="col-span-full py-8 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-600 italic">
-                        No subdomains discovered yet.
+                <div class="p-6 bg-slate-900/30 border border-slate-800 rounded-xl">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {{range .Domain.Subdomains}}
+                        <a href="/domains/redirect?name={{.}}" 
+                           aria-label="View subdomain {{.}}"
+                           class="flex items-center justify-between p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm font-mono text-primary hover:bg-primary/10 hover:border-primary/50 transition-all">
+                            <span class="truncate">{{.}}</span>
+                            <span class="material-symbols-outlined text-xs">open_in_new</span>
+                        </a>
+                        {{else}}
+                        <div class="col-span-full py-8 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-600 italic">
+                            No subdomains discovered yet.
+                        </div>
+                        {{end}}
                     </div>
-                    {{end}}
                 </div>
-            </div>
+            </section>
 
             <!-- Detailed Notes Feed -->
-            <div class="space-y-4">
-                <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+            <section aria-labelledby="notes-title">
+                <h3 id="notes-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">notes</span>
                     Internal Notes
                 </h3>
                 <div class="grid grid-cols-1 gap-4">
                     {{range .Domain.Notes}}
-                    <div class="p-6 bg-slate-800/30 border border-slate-700/50 rounded-xl relative group">
+                    <article class="p-6 bg-slate-800/30 border border-slate-700/50 rounded-xl relative group">
                         <div class="flex justify-between items-start mb-2">
                             <span class="text-[10px] font-bold text-slate-500 uppercase">{{.Author}} • {{.UpdatedAt.Format "Jan 02, 15:04"}}</span>
                             <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button hx-get="/notes/{{.ID}}/edit" hx-target="body" hx-swap="beforeend" class="text-slate-500 hover:text-white transition-colors">
+                                <button hx-get="/notes/{{.ID}}/edit" hx-target="body" hx-swap="beforeend" 
+                                    aria-label="Edit note"
+                                    class="text-slate-500 hover:text-white transition-colors">
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
                             </div>
                         </div>
                         <p class="text-sm text-slate-300 leading-relaxed">{{.Content}}</p>
-                    </div>
+                    </article>
                     {{else}}
                     <div class="py-12 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-600 italic">
                         No technical notes added for this domain yet.
                     </div>
                     {{end}}
                 </div>
-            </div>
+            </section>
         </div>
 
         <!-- Sidebar: Scan History Timeline -->
-        <div class="space-y-6">
-            <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+        <aside aria-labelledby="history-title" class="space-y-6">
+            <h3 id="history-title" class="text-xl font-black tracking-tight flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary">history</span>
                 Scan History
             </h3>
@@ -176,7 +184,7 @@
                 <div class="pl-8 text-slate-600 italic text-sm">No historical data available.</div>
                 {{end}}
             </div>
-        </div>
+        </aside>
     </div>
 </div>
 {{end}}

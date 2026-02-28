@@ -46,22 +46,22 @@ func main() {
 	}
 	defer db.Close()
 
-	// Repositories
-	domainRepo := repositories.NewDomainRepository(db.Pool)
-
 	// Services Initialization
-	vulnConnectors := []vulnintel.SourceConnector{sources.NewNVDConnector()}
+	vulnConnectors := []vulnintel.SourceConnector{
+		sources.NewNVDConnector(),
+		sources.NewVulnersConnector(),
+	}
 	vulnService := vulnintel.NewService(db.Pool, vulnConnectors)
 	alertService := services.NewAlertService(db.Pool)
 	
 	chaosClient := chaos.NewClient(os.Getenv("CHAOS_API_KEY"))
-	chaosService := services.NewChaosService(domainRepo, chaosClient)
+	chaosService := services.NewChaosService(repositories.NewDomainRepository(db.Pool), chaosClient)
 	
 	ipInfoClient := ipinfo.NewClient(os.Getenv("IPINFO_TOKEN"))
-	ingestionService := services.NewIngestionService(domainRepo, ipInfoClient)
+	ingestionService := services.NewIngestionService(repositories.NewDomainRepository(db.Pool), ipInfoClient)
 
 	cliRunner := runner.NewRunner()
-	httpxService := services.NewHTTPXService(domainRepo, cliRunner)
+	httpxService := services.NewHTTPXService(repositories.NewDomainRepository(db.Pool), cliRunner)
 
 	// Handle Flags
 	if *syncFlag {
@@ -97,6 +97,7 @@ func main() {
 
 	// Repositories
 	dashboardRepo := repositories.NewDashboardRepository(db.Pool)
+	domainRepo := repositories.NewDomainRepository(db.Pool)
 	techRepo := repositories.NewTechRepository(db.Pool)
 	categoryRepo := repositories.NewCategoryRepository(db.Pool)
 	trendRepo := repositories.NewTrendRepo(db.Pool)
@@ -118,7 +119,20 @@ func main() {
 
 	// Router
 	r := chi.NewRouter()
-	r.Use(middleware.Logger, customMiddleware.Recovery, middleware.Recoverer, middleware.Compress(5), middleware.RealIP, middleware.CleanPath, customMiddleware.SanitizeInput)
+	
+	// Global Middleware
+	r.Use(middleware.Logger)
+	r.Use(customMiddleware.Recovery)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.CleanPath)
+	r.Use(middleware.Compress(5))
+	
+	// Rate Limiting
+	r.Use(middleware.Throttle(100))
+	r.Use(middleware.Timeout(60 * time.Second))
+	
+	r.Use(customMiddleware.SanitizeInput)
 
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))

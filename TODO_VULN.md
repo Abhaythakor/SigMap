@@ -4,7 +4,7 @@
 - [x] Database Migration: Create `technology_vuln_profile` table
 - [x] Define VulnProfile and VulnFinding models in `internal/vulnintel/models.go`
 - [x] Implement NVD Source Connector (Simulated)
-- [ ] Implement Vulners Source Connector (Phase 2)
+- [x] Implement Vulners Source Connector (Simulated)
 - [x] Implement Correlation Engine (`internal/vulnintel/correlator.go`)
 - [x] Implement Risk Scoring Logic (`internal/vulnintel/risk.go`)
 
@@ -15,7 +15,7 @@
 - [x] Implement Caching mechanism (via DB profile storage)
 
 ## Phase 3: UI & API Enhancements
-- [ ] Expose internal API: `GET /internal/vuln/{technology}`
+- [x] Expose internal API: `GET /internal/vuln/{technology}`
 - [x] Technologies View: Add Risk Level, CVE Count, and Exploit Available columns
 - [x] Domains View: Add Stack Risk Summary
 - [x] Dashboard Metrics: Add Critical Technologies counts
