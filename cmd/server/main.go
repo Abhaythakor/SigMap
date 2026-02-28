@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -19,13 +20,15 @@ import (
 	"github.com/Abhaythakor/SigMap/internal/services"
 	"github.com/Abhaythakor/SigMap/internal/vulnintel"
 	"github.com/Abhaythakor/SigMap/internal/vulnintel/sources"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	// Flags
 	syncFlag := flag.Bool("sync", false, "Sync technology metadata from Wappalyzer")
 	ingestFlag := flag.Bool("ingest", false, "Ingest mock sample data for domains")
-	vulnFlag := flag.Bool("vuln", false, "Refresh vulnerability profiles for detected technologies")
+	vulnFlag := flag.Bool("vuln", false, "Refresh vulnerability profiles")
+	alertFlag := flag.Bool("alert", false, "Run alert worker once")
 	flag.Parse()
 
 	// Load environment variables
@@ -40,51 +43,51 @@ func main() {
 	}
 	defer db.Close()
 
-	// Vulnerability Service Initialization
-	vulnConnectors := []vulnintel.SourceConnector{
-		sources.NewNVDConnector(),
-	}
+	// Services
+	vulnConnectors := []vulnintel.SourceConnector{sources.NewNVDConnector()}
 	vulnService := vulnintel.NewService(db.Pool, vulnConnectors)
+	alertService := services.NewAlertService(db.Pool)
 
-	// Handle Sync
+	// Handle Flags
 	if *syncFlag {
-		syncService := services.NewSyncService(db.Pool)
-		if err := syncService.Sync(context.Background()); err != nil {
+		if err := services.NewSyncService(db.Pool).Sync(context.Background()); err != nil {
 			log.Fatalf("Sync failed: %v", err)
 		}
-		log.Println("Sync completed. Exiting.")
 		return
 	}
 
-	// Handle Ingest
 	if *ingestFlag {
-		domainRepo := repositories.NewDomainRepository(db.Pool)
-		ingestionService := services.NewIngestionService(domainRepo)
-		if err := ingestionService.IngestSampleData(context.Background()); err != nil {
+		repo := repositories.NewDomainRepository(db.Pool)
+		if err := services.NewIngestionService(repo).IngestSampleData(context.Background()); err != nil {
 			log.Fatalf("Ingestion failed: %v", err)
 		}
-		log.Println("Mock ingestion completed. Exiting.")
 		return
 	}
 
-	// Handle Vuln Refresh
 	if *vulnFlag {
-		vulnJob := jobs.NewVulnRefreshJob(db.Pool, vulnService)
-		if err := vulnJob.Run(context.Background()); err != nil {
-			log.Fatalf("Vulnerability refresh failed: %v", err)
+		if err := jobs.NewVulnRefreshJob(db.Pool, vulnService).Run(context.Background()); err != nil {
+			log.Fatalf("Vuln refresh failed: %v", err)
 		}
-		log.Println("Vulnerability refresh completed. Exiting.")
 		return
 	}
 
-	// Initialize Repositories
+	if *alertFlag {
+		if err := jobs.NewAlertWorker(db.Pool, alertService).Run(context.Background()); err != nil {
+			log.Fatalf("Alert worker failed: %v", err)
+		}
+		return
+	}
+
+	// Background Workers
+	go startBackgroundJobs(db.Pool, vulnService, alertService)
+
+	// Repositories & Handlers
 	dashboardRepo := repositories.NewDashboardRepository(db.Pool)
 	domainRepo := repositories.NewDomainRepository(db.Pool)
 	techRepo := repositories.NewTechRepository(db.Pool)
 	categoryRepo := repositories.NewCategoryRepository(db.Pool)
 	trendRepo := repositories.NewTrendRepo(db.Pool)
 
-	// Initialize Handlers
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	domainHandler := handlers.NewDomainHandler(domainRepo)
 	techHandler := handlers.NewTechHandler(techRepo)
@@ -96,19 +99,10 @@ func main() {
 	exportHandler := handlers.NewExportHandler(domainRepo)
 	scanHandler := handlers.NewScanHandler(domainRepo, nil)
 
-	// Initialize Router
+	// Router
 	r := chi.NewRouter()
+	r.Use(middleware.Logger, customMiddleware.Recovery, middleware.Recoverer, middleware.Compress(5), middleware.RealIP, middleware.CleanPath, customMiddleware.SanitizeInput)
 
-	// Global Middleware
-	r.Use(middleware.Logger)
-	r.Use(customMiddleware.Recovery)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5))
-	r.Use(middleware.RealIP)
-	r.Use(middleware.CleanPath)
-	r.Use(customMiddleware.SanitizeInput)
-
-	// Static Files
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))
 
@@ -120,31 +114,34 @@ func main() {
 	r.Get("/categories", categoryHandler.List)
 	r.Get("/bookmarks", bookmarkHandler.List)
 	r.Post("/bookmarks/toggle", bookmarkHandler.Toggle)
-	r.Get("/notes", noteHandler.List)
-	r.Get("/notes/new", noteHandler.New)
-	r.Post("/notes", noteHandler.Create)
-	r.Get("/notes/{id}/edit", noteHandler.Edit)
-	r.Post("/notes/{id}", noteHandler.Update)
-	r.Delete("/notes/{id}", noteHandler.Delete)
+	r.Route("/notes", func(r chi.Router) {
+		r.Get("/", noteHandler.List)
+		r.Get("/new", noteHandler.New)
+		r.Post("/", noteHandler.Create)
+		r.Get("/{id}/edit", noteHandler.Edit)
+		r.Post("/{id}", noteHandler.Update)
+		r.Delete("/{id}", noteHandler.Delete)
+	})
 	r.Get("/trends", trendHandler.List)
 	r.Get("/delta", deltaHandler.List)
 	r.Get("/export/domains", exportHandler.Domains)
 	r.Post("/scan", scanHandler.Trigger)
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK); w.Write([]byte("OK")) })
 
-	// Health Check
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
-
-	// Server Execution
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	if port == "" { port = "8080" }
+	log.Printf("SigMap starting on port %s...", port)
+	http.ListenAndServe(":"+port, r)
+}
 
-	log.Printf("Server starting on port %s...", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+func startBackgroundJobs(pool *pgxpool.Pool, vulnSvc *vulnintel.Service, alertSvc *services.AlertService) {
+	alertWorker := jobs.NewAlertWorker(pool, alertSvc)
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := alertWorker.Run(context.Background()); err != nil {
+			log.Printf("Background alert worker error: %v", err)
+		}
 	}
 }
