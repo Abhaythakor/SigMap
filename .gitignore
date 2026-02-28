@@ -9,12 +9,10 @@ server.exe
 *.log
 /tmp/
 
-# Documentation and Planning (as requested)
+# Documentation and Planning
 docs/
-TODO_LOGIC.md
-TODO_PERFORMANCE.md
-TODO_TESTING.md
-TODO_UI_UX.md
+TODO*.md
+TEST*.md
 
 # Test data
 testDir/
