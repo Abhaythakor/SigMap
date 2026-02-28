@@ -56,63 +56,81 @@
     </section>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Current Tech Stack -->
+        <!-- Main Content (Stack & Vulns) -->
         <div class="lg:col-span-2 space-y-12">
+            <!-- Active Vulnerabilities (Nuclei Results) -->
+            {{if .Domain.ActiveVulns}}
+            <section aria-labelledby="vulns-title">
+                <h3 id="vulns-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4 text-rose-500">
+                    <span class="material-symbols-outlined">security</span>
+                    Active Vulnerabilities (Nuclei)
+                </h3>
+                <div class="grid grid-cols-1 gap-4">
+                    {{range .Domain.ActiveVulns}}
+                    <div class="p-5 bg-slate-900/50 border border-slate-800 rounded-xl border-l-4 
+                        {{if eq .Severity "critical"}}border-l-rose-600{{else if eq .Severity "high"}}border-l-rose-500{{else if eq .Severity "medium"}}border-l-amber-500{{else}}border-l-blue-500{{end}}">
+                        <div class="flex justify-between items-start mb-2">
+                            <h4 class="font-bold text-white">{{.Name}}</h4>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase
+                                {{if eq .Severity "critical"}}bg-rose-600 text-white{{else if eq .Severity "high"}}bg-rose-500/10 text-rose-500{{else if eq .Severity "medium"}}bg-amber-500/10 text-amber-500{{else}}bg-blue-500/10 text-blue-500{{end}}">
+                                {{.Severity}}
+                            </span>
+                        </div>
+                        <p class="text-sm text-slate-400 leading-relaxed mb-3">{{.Description}}</p>
+                        <div class="flex items-center gap-4 text-[10px] font-mono text-slate-500">
+                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">extension</span> {{.TemplateID}}</span>
+                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-xs">link</span> {{.MatchedURL}}</span>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </section>
+            {{end}}
+
             <section aria-labelledby="stack-title">
                 <h3 id="stack-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">analytics</span>
-                    Current Technology Stack
+                    Technology Stack & CVE Metadata
                 </h3>
-                <div class="bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden">
-                    <table class="w-full text-left">
-                        <thead class="bg-slate-800/50 border-b border-slate-800">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Technology</th>
-                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Version</th>
-                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500 text-center">CVEs</th>
-                                <th scope="col" class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Risk</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-800">
-                            {{range .Domain.CurrentStack}}
-                            <tr class="hover:bg-slate-800/30 transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center overflow-hidden">
-                                            {{if .Icon}}
-                                            <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}} icon" class="w-5 h-5 object-contain">
-                                            {{else}}
-                                            <span class="material-symbols-outlined text-lg text-primary">code</span>
-                                            {{end}}
-                                        </div>
-                                        <span class="font-bold text-sm">{{.Name}}</span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 font-mono text-xs text-slate-400">{{if .Version}}{{.Version}}{{else}}---{{end}}</td>
-                                <td class="px-6 py-4 text-center">
-                                    {{if gt .CVECount 0}}
-                                    <span class="text-sm font-bold text-rose-500">{{.CVECount}}</span>
+                <div class="space-y-4">
+                    {{range .Domain.CurrentStack}}
+                    <div class="bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden">
+                        <div class="p-4 bg-slate-800/20 flex justify-between items-center border-b border-slate-800">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700">
+                                    {{if .Icon}}
+                                    <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-5 h-5 object-contain">
                                     {{else}}
-                                    <span class="text-xs text-slate-600">0</span>
+                                    <span class="material-symbols-outlined text-lg text-primary">code</span>
                                     {{end}}
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase 
-                                        {{if eq .RiskLevel "Critical"}}bg-rose-600 text-white animate-pulse
-                                        {{else if eq .RiskLevel "High"}}bg-rose-500/10 text-rose-500
-                                        {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
-                                        {{else}}bg-emerald-500/10 text-emerald-500{{end}}">
-                                        {{.RiskLevel}}
-                                    </span>
-                                </td>
-                            </tr>
-                            {{end}}
-                        </tbody>
-                    </table>
+                                </div>
+                                <div>
+                                    <span class="font-bold text-sm text-white">{{.Name}}</span>
+                                    <span class="text-[10px] font-mono text-slate-500 ml-2">{{if .Version}}{{.Version}}{{else}}Version Undetected{{end}}</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase 
+                                {{if eq .RiskLevel "Critical"}}bg-rose-600 text-white animate-pulse
+                                {{else if eq .RiskLevel "High"}}bg-rose-500/10 text-rose-500
+                                {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
+                                {{else}}bg-emerald-500/10 text-emerald-500{{end}}">
+                                {{.RiskLevel}}
+                            </span>
+                        </div>
+                        {{if gt .CVECount 0}}
+                        <div class="p-4 bg-rose-500/5">
+                            <p class="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1 mb-2">
+                                <span class="material-symbols-outlined text-xs">gpp_maybe</span>
+                                Intelligence Findings ({{.CVECount}})
+                            </p>
+                            <p class="text-xs text-slate-400">Version-based correlation identified {{.CVECount}} known vulnerabilities. Run active scan for validation.</p>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
                 </div>
             </section>
 
-            <!-- Discovered Subdomains -->
             <section aria-labelledby="discovery-title">
                 <h3 id="discovery-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">hub</span>
@@ -122,7 +140,6 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {{range .Domain.Subdomains}}
                         <a href="/domains/redirect?name={{.}}" 
-                           aria-label="View subdomain {{.}}"
                            class="flex items-center justify-between p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm font-mono text-primary hover:bg-primary/10 hover:border-primary/50 transition-all">
                             <span class="truncate">{{.}}</span>
                             <span class="material-symbols-outlined text-xs">open_in_new</span>
@@ -136,7 +153,6 @@
                 </div>
             </section>
 
-            <!-- Detailed Notes Feed -->
             <section aria-labelledby="notes-title">
                 <h3 id="notes-title" class="text-xl font-black tracking-tight flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-primary">notes</span>
@@ -148,9 +164,7 @@
                         <div class="flex justify-between items-start mb-2">
                             <span class="text-[10px] font-bold text-slate-500 uppercase">{{.Author}} • {{.UpdatedAt.Format "Jan 02, 15:04"}}</span>
                             <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button hx-get="/notes/{{.ID}}/edit" hx-target="body" hx-swap="beforeend" 
-                                    aria-label="Edit note"
-                                    class="text-slate-500 hover:text-white transition-colors">
+                                <button hx-get="/notes/{{.ID}}/edit" hx-target="body" hx-swap="beforeend" class="text-slate-500 hover:text-white transition-colors">
                                     <span class="material-symbols-outlined text-sm">edit</span>
                                 </button>
                             </div>

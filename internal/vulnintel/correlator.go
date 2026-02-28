@@ -27,13 +27,24 @@ func (c *Correlator) Correlate(technology string, findings []VulnFinding) VulnPr
 	for _, f := range findings {
 		existing, ok := cveMap[f.CVE]
 		if !ok {
+			// Initialize severity label if empty
+			if f.SeverityLabel == "" {
+				f.SeverityLabel = getSeverityLabel(f.Severity)
+			}
 			cveMap[f.CVE] = f
 			continue
 		}
 
-		// Merge logic: take the "worst case" for each field
+		// Merge logic: take the "worst case"
 		if f.Severity > existing.Severity {
 			existing.Severity = f.Severity
+			existing.SeverityLabel = getSeverityLabel(f.Severity)
+		}
+		if f.Description != "" && existing.Description == "" {
+			existing.Description = f.Description
+		}
+		if f.BugType != "" && existing.BugType == "" {
+			existing.BugType = f.BugType
 		}
 		if f.ExploitAvailable {
 			existing.ExploitAvailable = true
@@ -49,6 +60,7 @@ func (c *Correlator) Correlate(technology string, findings []VulnFinding) VulnPr
 
 	profile.CVECount = len(cveMap)
 	for _, f := range cveMap {
+		profile.DetailedVulns = append(profile.DetailedVulns, f)
 		if f.Severity >= 8.0 {
 			profile.HighSeverityCount++
 		}
@@ -65,4 +77,17 @@ func (c *Correlator) Correlate(technology string, findings []VulnFinding) VulnPr
 
 	profile.RiskLevel = CalculateRisk(profile)
 	return profile
+}
+
+func getSeverityLabel(score float64) string {
+	switch {
+	case score >= 9.0:
+		return "Critical"
+	case score >= 7.0:
+		return "High"
+	case score >= 4.0:
+		return "Medium"
+	default:
+		return "Low"
+	}
 }

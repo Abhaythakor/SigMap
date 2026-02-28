@@ -46,7 +46,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// Services Initialization
+	// Infrastructure & Services
+	domainRepo := repositories.NewDomainRepository(db.Pool)
+	cliRunner := runner.NewRunner()
+
 	vulnConnectors := []vulnintel.SourceConnector{
 		sources.NewNVDConnector(),
 		sources.NewVulnersConnector(),
@@ -55,13 +58,13 @@ func main() {
 	alertService := services.NewAlertService(db.Pool)
 	
 	chaosClient := chaos.NewClient(os.Getenv("CHAOS_API_KEY"))
-	chaosService := services.NewChaosService(repositories.NewDomainRepository(db.Pool), chaosClient)
+	chaosService := services.NewChaosService(domainRepo, chaosClient)
 	
 	ipInfoClient := ipinfo.NewClient(os.Getenv("IPINFO_TOKEN"))
-	ingestionService := services.NewIngestionService(repositories.NewDomainRepository(db.Pool), ipInfoClient)
+	ingestionService := services.NewIngestionService(domainRepo, ipInfoClient)
 
-	cliRunner := runner.NewRunner()
-	httpxService := services.NewHTTPXService(repositories.NewDomainRepository(db.Pool), cliRunner)
+	httpxService := services.NewHTTPXService(domainRepo, cliRunner)
+	nucleiService := services.NewNucleiService(domainRepo, cliRunner)
 
 	// Handle Flags
 	if *syncFlag {
@@ -95,14 +98,12 @@ func main() {
 	// Background Workers
 	go startBackgroundJobs(db.Pool, vulnService, alertService)
 
-	// Repositories
+	// Repositories & Handlers
 	dashboardRepo := repositories.NewDashboardRepository(db.Pool)
-	domainRepo := repositories.NewDomainRepository(db.Pool)
 	techRepo := repositories.NewTechRepository(db.Pool)
 	categoryRepo := repositories.NewCategoryRepository(db.Pool)
 	trendRepo := repositories.NewTrendRepo(db.Pool)
 
-	// Handlers
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	domainHandler := handlers.NewDomainHandler(domainRepo)
 	techHandler := handlers.NewTechHandler(techRepo)
@@ -113,26 +114,13 @@ func main() {
 	deltaHandler := handlers.NewDeltaHandler(domainRepo)
 	exportHandler := handlers.NewExportHandler(domainRepo)
 	
-	scanHandler := handlers.NewScanHandler(domainRepo, ingestionService, vulnService, chaosService, httpxService)
+	scanHandler := handlers.NewScanHandler(domainRepo, ingestionService, vulnService, chaosService, httpxService, nucleiService)
 	settingsHandler := handlers.NewSettingsHandler(domainRepo)
 	vulnHandler := handlers.NewVulnHandler(vulnService)
 
 	// Router
 	r := chi.NewRouter()
-	
-	// Global Middleware
-	r.Use(middleware.Logger)
-	r.Use(customMiddleware.Recovery)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.CleanPath)
-	r.Use(middleware.Compress(5))
-	
-	// Rate Limiting
-	r.Use(middleware.Throttle(100))
-	r.Use(middleware.Timeout(60 * time.Second))
-	
-	r.Use(customMiddleware.SanitizeInput)
+	r.Use(middleware.Logger, customMiddleware.Recovery, middleware.Recoverer, middleware.Compress(5), middleware.RealIP, middleware.CleanPath, customMiddleware.SanitizeInput)
 
 	fileServer := http.FileServer(http.Dir("./static"))
 	r.Handle("/static/*", http.StripPrefix("/static/", fileServer))

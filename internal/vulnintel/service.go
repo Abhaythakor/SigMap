@@ -24,7 +24,6 @@ func NewService(pool *pgxpool.Pool, connectors []SourceConnector) *Service {
 
 // GetTechVulnProfile retrieves or updates the vulnerability profile for a technology.
 func (s *Service) GetTechVulnProfile(ctx context.Context, technology string) (VulnProfile, error) {
-	// 1. Try to fetch from DB
 	var p VulnProfile
 	err := s.Pool.QueryRow(ctx, `
 		SELECT technology, cve_count, high_count, exploit_available, poc_available, exploited_in_wild, risk_level, last_checked
@@ -33,17 +32,40 @@ func (s *Service) GetTechVulnProfile(ctx context.Context, technology string) (Vu
 	`, technology).Scan(&p.Technology, &p.CVECount, &p.HighSeverityCount, &p.ExploitAvailable, &p.POCAvailable, &p.ExploitedInWild, &p.RiskLevel, &p.LastChecked)
 
 	if err == nil {
-		// Found in DB
+		// Fetch detailed vulnerabilities
+		p.DetailedVulns, _ = s.getDetailedVulns(ctx, technology)
 		return p, nil
 	}
 
-	// 2. Not found, fetch from sources
 	return s.RefreshTechProfile(ctx, technology)
+}
+
+func (s *Service) getDetailedVulns(ctx context.Context, technology string) ([]VulnFinding, error) {
+	rows, err := s.Pool.Query(ctx, `
+		SELECT cve_id, description, severity_score, severity_label, bug_type, exploit_available, published_at
+		FROM vulnerability_details
+		WHERE technology = $1
+		ORDER BY severity_score DESC NULLS LAST
+	`, technology)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var findings []VulnFinding
+	for rows.Next() {
+		var f VulnFinding
+		err := rows.Scan(&f.CVE, &f.Description, &f.Severity, &f.SeverityLabel, &f.BugType, &f.ExploitAvailable, &f.PublishedAt)
+		if err == nil {
+			findings = append(findings, f)
+		}
+	}
+	return findings, nil
 }
 
 // RefreshTechProfile forced refresh of a technology's vulnerability data.
 func (s *Service) RefreshTechProfile(ctx context.Context, technology string) (VulnProfile, error) {
-	log.Printf("Refreshing vulnerability profile for: %s", technology)
+	log.Printf("Refreshing real vulnerability details for: %s", technology)
 	
 	var allFindings []VulnFinding
 	var mu sync.Mutex
@@ -55,7 +77,6 @@ func (s *Service) RefreshTechProfile(ctx context.Context, technology string) (Vu
 			defer wg.Done()
 			findings, err := c.FetchFindings(technology)
 			if err != nil {
-				log.Printf("Source %s error for %s: %v", c.GetName(), technology, err)
 				return
 			}
 			mu.Lock()
@@ -68,7 +89,7 @@ func (s *Service) RefreshTechProfile(ctx context.Context, technology string) (Vu
 
 	profile := s.Correlator.Correlate(technology, allFindings)
 
-	// 3. Store/Update in DB
+	// Update Summary
 	_, err := s.Pool.Exec(ctx, `
 		INSERT INTO technology_vuln_profile (technology, cve_count, high_count, exploit_available, poc_available, exploited_in_wild, risk_level, last_checked)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -81,6 +102,20 @@ func (s *Service) RefreshTechProfile(ctx context.Context, technology string) (Vu
 			risk_level = EXCLUDED.risk_level,
 			last_checked = EXCLUDED.last_checked
 	`, profile.Technology, profile.CVECount, profile.HighSeverityCount, profile.ExploitAvailable, profile.POCAvailable, profile.ExploitedInWild, profile.RiskLevel, profile.LastChecked)
+
+	// Update Details
+	for _, v := range profile.DetailedVulns {
+		_, _ = s.Pool.Exec(ctx, `
+			INSERT INTO vulnerability_details (cve_id, technology, description, severity_score, severity_label, bug_type, exploit_available, published_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			ON CONFLICT (cve_id, technology) DO UPDATE SET
+				description = EXCLUDED.description,
+				severity_score = EXCLUDED.severity_score,
+				severity_label = EXCLUDED.severity_label,
+				bug_type = EXCLUDED.bug_type,
+				exploit_available = EXCLUDED.exploit_available
+		`, v.CVE, technology, v.Description, v.Severity, v.SeverityLabel, v.BugType, v.ExploitAvailable, v.PublishedAt)
+	}
 
 	return profile, err
 }

@@ -16,15 +16,17 @@ type ScanHandler struct {
 	VulnSvc    *vulnintel.Service
 	ChaosSvc   *services.ChaosService
 	HTTPXSvc   *services.HTTPXService
+	NucleiSvc  *services.NucleiService
 }
 
-func NewScanHandler(repo *repositories.DomainRepository, ingestSvc *services.IngestionService, vulnSvc *vulnintel.Service, chaosSvc *services.ChaosService, httpxSvc *services.HTTPXService) *ScanHandler {
+func NewScanHandler(repo *repositories.DomainRepository, ingestSvc *services.IngestionService, vulnSvc *vulnintel.Service, chaosSvc *services.ChaosService, httpxSvc *services.HTTPXService, nucleiSvc *services.NucleiService) *ScanHandler {
 	return &ScanHandler{
 		DomainRepo: repo,
 		IngestSvc:  ingestSvc,
 		VulnSvc:    vulnSvc,
 		ChaosSvc:   chaosSvc,
 		HTTPXSvc:   httpxSvc,
+		NucleiSvc:  nucleiSvc,
 	}
 }
 
@@ -40,7 +42,7 @@ func (h *ScanHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Triggering scan for domain: %s", domainName)
+	log.Printf("Triggering full intelligence scan for: %s", domainName)
 	
 	ctx := r.Context()
 	domainID, err := h.DomainRepo.EnsureDomain(ctx, domainName)
@@ -59,6 +61,11 @@ func (h *ScanHandler) Trigger(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		if err := h.HTTPXSvc.ScanDomain(context.Background(), domainName); err != nil {
 			log.Printf("Scan error for %s: %v", domainName, err)
+		}
+		
+		// 4. Active Vulnerability Scan (Nuclei) - Run after tech detection
+		if err := h.NucleiSvc.ScanAndStore(context.Background(), domainID, domainName); err != nil {
+			log.Printf("Nuclei error for %s: %v", domainName, err)
 		}
 	}()
 
