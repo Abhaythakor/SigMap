@@ -1,10 +1,14 @@
 package services
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
-	"math/rand"
-	"time"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Abhaythakor/SigMap/internal/repositories"
 )
@@ -17,81 +21,90 @@ func NewIngestionService(repo *repositories.DomainRepository) *IngestionService 
 	return &IngestionService{Repo: repo}
 }
 
-// IngestSampleData populates the database with mock domains and technologies.
-func (s *IngestionService) IngestSampleData(ctx context.Context) error {
-	domains := []string{
-		"stripe.com", "notion.so", "github.com", "google.com", "facebook.com",
-		"amazon.com", "apple.com", "netflix.com", "microsoft.com", "twitter.com",
-		"openai.com", "slack.com", "zoom.us", "spotify.com", "airbnb.com",
+// ScanResult matches the JSON format in testDir
+type ScanResult struct {
+	Domain     string `json:"domain"`
+	URL        string `json:"url"`
+	Technology string `json:"technology"`
+	Confidence string `json:"confidence"`
+	Source     string `json:"source"`
+	Version    string `json:"version,omitempty"`
+}
+
+// IngestFromDirectory reads all .json files in a directory and saves them.
+func (s *IngestionService) IngestFromDirectory(ctx context.Context, dirPath string) error {
+	files, err := os.ReadDir(dirPath)
+	if err != nil {
+		return fmt.Errorf("failed to read directory: %w", err)
 	}
 
-	techs := []string{
-		"React", "Vue.js", "Nginx", "Apache", "PHP", "Node.js", "Express",
-		"Go", "PostgreSQL", "MySQL", "Redis", "Cloudflare", "Google Analytics",
-		"Segment", "Mixpanel", "Tailwind CSS", "Bootstrap", "Next.js", "WordPress",
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".json") {
+			filePath := filepath.Join(dirPath, file.Name())
+			log.Printf("Ingesting file: %s", filePath)
+			if err := s.ingestFile(ctx, filePath); err != nil {
+				log.Printf("Error ingesting %s: %v", filePath, err)
+			}
+		}
 	}
+	return nil
+}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+func (s *IngestionService) ingestFile(ctx context.Context, filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-	for _, domainName := range domains {
-		domainID, err := s.Repo.EnsureDomain(ctx, domainName)
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		var res ScanResult
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(line), &res); err != nil {
+			log.Printf("Skip invalid JSON line in %s: %v", filePath, err)
+			continue
+		}
+
+		domainID, err := s.Repo.EnsureDomain(ctx, res.Domain)
 		if err != nil {
 			return err
 		}
 
-		s.LookupInfrastructure(ctx, domainID, domainName)
+		// Map string confidence to int
+		confInt := 50
+		switch strings.ToLower(res.Confidence) {
+		case "high":
+			confInt = 100
+		case "medium":
+			confInt = 70
+		case "low":
+			confInt = 40
+		}
 
-		numTechs := r.Intn(4) + 3
-		shuffledTechs := make([]string, len(techs))
-		copy(shuffledTechs, techs)
-		r.Shuffle(len(shuffledTechs), func(i, j int) {
-			shuffledTechs[i], shuffledTechs[j] = shuffledTechs[j], shuffledTechs[i]
-		})
-
-		for i := 0; i < numTechs; i++ {
-			version := ""
-			// HIGHER PROBABILITY OF EMPTY VERSION FOR TESTING (80% empty)
-			if r.Float32() > 0.8 {
-				major := r.Intn(10) + 1
-				minor := r.Intn(20)
-				patch := r.Intn(10)
-				version = fmt.Sprintf("v%d.%d.%d", major, minor, patch)
-			}
-
-			techName := shuffledTechs[i]
-			// 10% chance of using "Tech:Version" format
-			if version != "" && r.Float32() > 0.9 {
-				techName = fmt.Sprintf("%s:%s", techName, version)
-				version = ""
-			}
-
-			err = s.Repo.AddDetection(ctx, domainID, techName, "https://"+domainName, version, r.Intn(40)+60, "Mock Scanner")
-			if err != nil {
-				return err
-			}
+		// Add detection (repo handles "Tech:Version" splitting automatically)
+		err = s.Repo.AddDetection(ctx, domainID, res.Technology, res.URL, res.Version, confInt, res.Source)
+		if err != nil {
+			log.Printf("Error adding detection %s for %s: %v", res.Technology, res.Domain, err)
 		}
 	}
 
-	return nil
+	return scanner.Err()
 }
 
-// LookupInfrastructure simulates discovery of IP, ASN, and Cloud Provider.
-func (s *IngestionService) LookupInfrastructure(ctx context.Context, domainID int, domainName string) {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	
-	ips := []string{"34.212.12.1", "52.4.15.22", "104.16.24.5", "13.248.155.12"}
-	clouds := []string{"AWS", "Google Cloud", "Cloudflare", "Azure"}
-	asns := []int{16509, 15169, 13335, 8075}
-	orgs := []string{"Amazon.com", "Google LLC", "Cloudflare, Inc.", "Microsoft Corp"}
+// IngestSampleData remains for mock testing if needed
+func (s *IngestionService) IngestSampleData(ctx context.Context) error {
+    // Logic kept for backup/reference
+    return nil
+}
 
-	idx := rng.Intn(len(ips))
-	
-	s.Repo.Pool.Exec(ctx, `
-		UPDATE domains SET 
-			ip_address = $1, 
-			cloud_provider = $2, 
-			asn = $3, 
-			asn_org = $4 
-		WHERE id = $5
-	`, ips[idx], clouds[idx], asns[idx], orgs[idx], domainID)
+func (s *IngestionService) LookupInfrastructure(ctx context.Context, domainID int, domainName string) {
+	// Simple mock infrastructure logic
+	ips := []string{"34.212.12.1", "52.4.15.22", "104.16.24.5", "13.248.155.12"}
+	idx := len(domainName) % len(ips)
+	s.Repo.Pool.Exec(ctx, "UPDATE domains SET ip_address = $1, cloud_provider = 'Detected' WHERE id = $2", ips[idx], domainID)
 }

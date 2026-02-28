@@ -58,7 +58,7 @@ func main() {
 
 	if *ingestFlag {
 		repo := repositories.NewDomainRepository(db.Pool)
-		if err := services.NewIngestionService(repo).IngestSampleData(context.Background()); err != nil {
+		if err := services.NewIngestionService(repo).IngestFromDirectory(context.Background(), "testDir"); err != nil {
 			log.Fatalf("Ingestion failed: %v", err)
 		}
 		return
