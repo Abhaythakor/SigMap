@@ -128,6 +128,7 @@ func main() {
 	r.Get("/internal/vuln/{technology}", vulnHandler.GetProfile)
 	
 	r.Get("/domains", domainHandler.List)
+	r.Get("/domains/redirect", domainHandler.RedirectByName)
 	r.Get("/domains/{id}", domainHandler.Detail)
 	r.Get("/technologies", techHandler.List)
 	r.Get("/categories", categoryHandler.List)

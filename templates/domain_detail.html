@@ -12,6 +12,14 @@
             <a href="/domains" class="hover:text-primary transition-colors">Domains</a>
             <span class="material-symbols-outlined text-xs">chevron_right</span>
             <span class="text-slate-100 font-medium">{{.Domain.Name}}</span>
+            {{if .Domain.CurrentStack}}
+            <span class="ml-2 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Live
+            </span>
+            {{else}}
+            <span class="ml-2 px-2 py-0.5 rounded bg-slate-500/10 text-slate-500 text-[10px] font-bold uppercase tracking-wider">Offline</span>
+            {{end}}
         </nav>
         <div class="flex gap-3">
             {{template "bookmark_button" .Domain}}
@@ -47,58 +55,79 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <!-- Current Tech Stack (Enriched) -->
-        <div class="lg:col-span-2 space-y-6">
-            <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary">analytics</span>
-                Current Technology Stack
-            </h3>
-            <div class="bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-800/50 border-b border-slate-800">
-                        <tr>
-                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Technology</th>
-                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Version</th>
-                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500 text-center">CVEs</th>
-                            <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Risk</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-800">
-                        {{range .Domain.CurrentStack}}
-                        <tr class="hover:bg-slate-800/30 transition-colors">
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center overflow-hidden">
-                                        {{if .Icon}}
-                                        <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-5 h-5 object-contain">
-                                        {{else}}
-                                        <span class="material-symbols-outlined text-lg text-primary">code</span>
-                                        {{end}}
+        <!-- Current Tech Stack -->
+        <div class="lg:col-span-2 space-y-8">
+            <div class="space-y-4">
+                <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">analytics</span>
+                    Current Technology Stack
+                </h3>
+                <div class="bg-slate-900/30 border border-slate-800 rounded-xl overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-800/50 border-b border-slate-800">
+                            <tr>
+                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Technology</th>
+                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Version</th>
+                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500 text-center">CVEs</th>
+                                <th class="px-6 py-3 text-[10px] font-bold uppercase text-slate-500">Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800">
+                            {{range .Domain.CurrentStack}}
+                            <tr class="hover:bg-slate-800/30 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center overflow-hidden">
+                                            {{if .Icon}}
+                                            <img src="https://www.wappalyzer.com/images/icons/{{.Icon}}" alt="{{.Name}}" class="w-5 h-5 object-contain">
+                                            {{else}}
+                                            <span class="material-symbols-outlined text-lg text-primary">code</span>
+                                            {{end}}
+                                        </div>
+                                        <span class="font-bold text-sm">{{.Name}}</span>
                                     </div>
-                                    <span class="font-bold text-sm">{{.Name}}</span>
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 font-mono text-xs text-slate-400">{{if .Version}}{{.Version}}{{else}}---{{end}}</td>
-                            <td class="px-6 py-4 text-center">
-                                {{if gt .CVECount 0}}
-                                <span class="text-sm font-bold text-rose-500">{{.CVECount}}</span>
-                                {{else}}
-                                <span class="text-xs text-slate-600">0</span>
-                                {{end}}
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase 
-                                    {{if eq .RiskLevel "Critical"}}bg-rose-600 text-white animate-pulse
-                                    {{else if eq .RiskLevel "High"}}bg-rose-500/10 text-rose-500
-                                    {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
-                                    {{else}}bg-emerald-500/10 text-emerald-500{{end}}">
-                                    {{.RiskLevel}}
-                                </span>
-                            </td>
-                        </tr>
-                        {{end}}
-                    </tbody>
-                </table>
+                                </td>
+                                <td class="px-6 py-4 font-mono text-xs text-slate-400">{{if .Version}}{{.Version}}{{else}}---{{end}}</td>
+                                <td class="px-6 py-4 text-center">
+                                    {{if gt .CVECount 0}}
+                                    <span class="text-sm font-bold text-rose-500">{{.CVECount}}</span>
+                                    {{else}}
+                                    <span class="text-xs text-slate-600">0</span>
+                                    {{end}}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase 
+                                        {{if eq .RiskLevel "Critical"}}bg-rose-600 text-white animate-pulse
+                                        {{else if eq .RiskLevel "High"}}bg-rose-500/10 text-rose-500
+                                        {{else if eq .RiskLevel "Medium"}}bg-amber-500/10 text-amber-500
+                                        {{else}}bg-emerald-500/10 text-emerald-500{{end}}">
+                                        {{.RiskLevel}}
+                                    </span>
+                                </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Discovered Subdomains -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-black tracking-tight flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">hub</span>
+                    Discovered Subdomains
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {{range .Domain.Subdomains}}
+                    <a href="/domains/redirect?name={{.}}" class="p-3 bg-slate-900/30 border border-slate-800 rounded-lg text-sm font-mono text-primary hover:bg-primary/5 hover:border-primary/50 transition-all truncate">
+                        {{.}}
+                    </a>
+                    {{else}}
+                    <div class="col-span-full py-8 border-2 border-dashed border-slate-800 rounded-xl text-center text-slate-600 italic">
+                        No subdomains discovered yet.
+                    </div>
+                    {{end}}
+                </div>
             </div>
 
             <!-- Detailed Notes Feed -->
@@ -141,7 +170,7 @@
                     <div class="absolute -left-[9px] top-1 w-4 h-4 rounded-full bg-slate-900 border-2 border-primary"></div>
                     <p class="text-[10px] font-bold text-slate-500 uppercase">{{.DetectedAt.Format "Jan 02, 2006"}}</p>
                     <p class="text-sm font-bold text-slate-200">{{.TechName}} <span class="text-xs font-mono text-slate-500">{{.Version}}</span></p>
-                    <p class="text-[10px] text-slate-600">Successfully detected via Source Header Analysis</p>
+                    <p class="text-[10px] text-slate-600">Detected via Intelligence Scan</p>
                 </div>
                 {{else}}
                 <div class="pl-8 text-slate-600 italic text-sm">No historical data available.</div>

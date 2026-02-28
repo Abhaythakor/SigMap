@@ -19,6 +19,7 @@ type DomainDetail struct {
 	CurrentStack []DomainTechDetail
 	History      []DetectionHistory
 	Notes        []NoteListItem
+	Subdomains   []string
 }
 
 type DomainTechDetail struct {
@@ -94,7 +95,25 @@ func (r *DomainRepository) GetDomainDetails(ctx context.Context, id int) (Domain
 		}
 	}
 
-	// 4. Notes
+	// 4. Subdomains (Discovery)
+	// We look for any domains that end with ".root_domain"
+	rowsSubs, err := r.Pool.Query(ctx, `
+		SELECT name FROM domains 
+		WHERE name LIKE '%.' || $1
+		AND id != $2
+		ORDER BY name ASC
+	`, d.Name, d.ID)
+	if err == nil {
+		defer rowsSubs.Close()
+		for rowsSubs.Next() {
+			var name string
+			if err := rowsSubs.Scan(&name); err == nil {
+				d.Subdomains = append(d.Subdomains, name)
+			}
+		}
+	}
+
+	// 5. Notes
 	d.Notes, _ = r.ListNotesForDomain(ctx, id)
 
 	return d, nil

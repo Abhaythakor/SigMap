@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -142,4 +143,21 @@ func (h *DomainHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	if err := h.templates["detail"].ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("Error rendering detail: %v", err)
 	}
+}
+
+func (h *DomainHandler) RedirectByName(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		http.Error(w, "Name required", http.StatusBadRequest)
+		return
+	}
+
+	var id int
+	err := h.Repo.Pool.QueryRow(r.Context(), "SELECT id FROM domains WHERE name = $1", name).Scan(&id)
+	if err != nil {
+		http.Redirect(w, r, "/domains", http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/domains/%d", id), http.StatusSeeOther)
 }
